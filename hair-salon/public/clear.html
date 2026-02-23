@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>清除所有數據</title>
+</head>
+<body>
+    <h1>清除緊...</h1>
+    <script>
+        // 清除 VIVA HAIR 所有數據
+        localStorage.removeItem('VIVA_config');
+        localStorage.removeItem('VIVA_bookings');
+        localStorage.removeItem('admin_token');
+        
+        document.body.innerHTML = '<h1>✅ 已清除所有數據！</h1><p>服務、髮型師、預約已全部清除</p><a href="index.html">返回首頁</a>';
+    </script>
+</body>
+</html>

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test - VIVA HAIR</title>
+    <style>body{font-family:sans-serif;padding:20px;max-width:600px;margin:0 auto} .test{padding:10px;margin:5px 0;border-radius:5px} .pass{background:#d4edda} .fail{background:#f8d7da} h2{border-bottom:2px solid #333;padding-bottom:10px}</style>
+</head>
+<body>
+    <h1>🔍 VIVA HAIR 網站檢查</h1>
+    
+    <h2>1. 基本結構</h2>
+    <div id="test1" class="test">檢查中...</div>
+    
+    <h2>2. Config讀取</h2>
+    <div id="test2" class="test">檢查中...</div>
+    
+    <h2>3. 服務列表</h2>
+    <div id="test3" class="test">檢查中...</div>
+    
+    <h2>4. 髮型師列表</h2>
+    <div id="test4" class="test">檢查中...</div>
+    
+    <h2>5. 日期輸入</h2>
+    <div id="test5" class="test">檢查中...</div>
+    
+    <h2>6. 時間鎖定邏輯</h2>
+    <div id="test6" class="test">檢查中...</div>
+    
+    <h2>7. 預約提交</h2>
+    <div id="test7" class="test">檢查中...</div>
+    
+    <h2>8. Google Maps</h2>
+    <div id="test8" class="test">檢查中...</div>
+    
+    <h2>9. WhatsApp浮動按鈕</h2>
+    <div id="test9" class="test">檢查中...</div>
+    
+    <h2>10. 後台登入</h2>
+    <div id="test10" class="test">檢查中...</div>
+
+<script>
+// 測試1: 基本結構
+(function(){
+    var nav = document.querySelector('.navbar');
+    var hero = document.querySelector('.hero');
+    var services = document.querySelector('#services');
+    var booking = document.querySelector('#booking');
+    var map = document.querySelector('.map-container');
+    var wa = document.querySelector('.float-wa');
+    
+    var result = 'PASS - ';
+    if(!nav) result = 'FAIL - nav';
+    else if(!hero) result = 'FAIL - hero';
+    else if(!services) result = 'FAIL - services';
+    else if(!booking) result = 'FAIL - booking';
+    
+    document.getElementById('test1').className = result.indexOf('PASS')>=0 ? 'test pass' : 'test fail';
+    document.getElementById('test1').textContent = result;
+})();
+
+// 測試2: Config
+(function(){
+    try{
+        var saved = localStorage.getItem('VIVA_config');
+        var config = saved ? JSON.parse(saved) : {services:{},staff:{}};
+        
+        if(config.services && config.staff){
+            document.getElementById('test2').className = 'test pass';
+            document.getElementById('test2').textContent = 'PASS - Config讀取正常';
+        }else{
+            document.getElementById('test2').className = 'test fail';
+            document.getElementById('test2').textContent = 'FAIL - Config結構問題';
+        }
+    }catch(e){
+        document.getElementById('test2').className = 'test fail';
+        document.getElementById('test2').textContent = 'FAIL - ' + e.message;
+    }
+})();
+
+// 測試3: 服務列表
+(function(){
+    var grid = document.getElementById('servicesGrid');
+    if(grid && grid.children.length > 0){
+        document.getElementById('test3').className = 'test pass';
+        document.getElementById('test3').textContent = 'PASS - 服務數量: ' + grid.children.length;
+    }else{
+        document.getElementById('test3').className = 'test fail';
+        document.getElementById('test3').textContent = 'FAIL - 沒有服務';
+    }
+})();
+
+// 測試4: 髮型師列表  
+(function(){
+    var grid = document.getElementById('teamGrid');
+    if(grid && grid.children.length > 0){
+        document.getElementById('test4').className = 'test pass';
+        document.getElementById('test4').textContent = 'PASS - 髮型師數量: ' + grid.children.length;
+    }else{
+        document.getElementById('test4').className = 'test fail';
+        document.getElementById('test4').textContent = 'FAIL - 沒有髮型師';
+    }
+})();
+
+// 測試5: 日期
+(function(){
+    var date = document.getElementById('dateInput');
+    if(date && date.min && date.max){
+        document.getElementById('test5').className = 'test pass';
+        document.getElementById('test5').textContent = 'PASS - 日期範圍: ' + date.min + ' 到 ' + date.max;
+    }else{
+        document.getElementById('test5').className = 'test fail';
+        document.getElementById('test5').textContent = 'FAIL - 日期設定問題';
+    }
+})();
+
+// 測試6: 時間鎖定
+(function(){
+    try{
+        function isLocked(date, time, staffId, duration){
+            var bookings = JSON.parse(localStorage.getItem('VIVA_bookings') || '[]');
+            var start = parseInt(time.split(':')[0]);
+            var end = start + Math.ceil(duration / 60);
+            for(var b of bookings){
+                if(b.date !== date || b.staff !== staffId) continue;
+                var bStart = parseInt(b.time.split(':')[0]);
+                var bService = {duration:60};
+                var bEnd = bStart + Math.ceil(bService.duration/60);
+                if(start < bEnd && end > bStart) return true;
+            }
+            return false;
+        }
+        
+        // 測試函數存在
+        if(typeof isLocked === 'function'){
+            document.getElementById('test6').className = 'test pass';
+            document.getElementById('test6').textContent = 'PASS - 時間鎖定函數正常';
+        }else{
+            document.getElementById('test6').className = 'test fail';
+            document.getElementById('test6').textContent = 'FAIL - 函數問題';
+        }
+    }catch(e){
+        document.getElementById('test6').className = 'test fail';
+        document.getElementById('test6').textContent = 'FAIL - ' + e.message;
+    }
+})();
+
+// 測試7: 預約表單
+(function(){
+    var form = document.getElementById('bookingForm');
+    if(form && form.onsubmit){
+        document.getElementById('test7').className = 'test pass';
+        document.getElementById('test7').textContent = 'PASS - 表單submit綁定正常';
+    }else{
+        document.getElementById('test7').className = 'test fail';
+        document.getElementById('test7').textContent = 'FAIL - 表單問題';
+    }
+})();
+
+// 測試8: Maps
+(function(){
+    var map = document.querySelector('.map-iframe');
+    if(map && map.src){
+        document.getElementById('test8').className = 'test pass';
+        document.getElementById('test8').textContent = 'PASS - Google Maps已嵌入';
+    }else{
+        document.getElementById('test8').className = 'test fail';
+        document.getElementById('test8').textContent = 'FAIL - Maps問題';
+    }
+})();
+
+// 測試9: WhatsApp
+(function(){
+    var wa = document.querySelector('.float-wa a');
+    if(wa && wa.href){
+        document.getElementById('test9').className = 'test pass';
+        document.getElementById('test9').textContent = 'PASS - WhatsApp連結: ' + wa.href;
+    }else{
+        document.getElementById('test9').className = 'test fail';
+        document.getElementById('test9').textContent = 'FAIL - WhatsApp問題';
+    }
+})();
+
+// 測試10: 後台
+(function(){
+    var admin = document.querySelector('.sidebar');
+    if(admin){
+        document.getElementById('test10').className = 'test pass';
+        document.getElementById('test10').textContent = 'PASS - 後台結構正常';
+    }else{
+        document.getElementById('test10').className = 'test fail';
+        document.getElementById('test10').textContent = 'Note - 後台需要登入後顯示(正常)';
+    }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIVA HAIR - 髮型屋預約</title>
+    <meta name="description" content="VIVA HAIR 太子通菜街17A 髮型屋預約">
+    <style>
+        :root {
+            --cream: #FAF8F5; --cream-light: #FDFCFA; --beige: #F5F0E8; --beige-dark: #E8E0D5;
+            --milk-tea: #D4C4B0; --brown-light: #A68B6A; --brown-soft: #B8A58A;
+            --text-dark: #3D3D3D; --text-soft: #6B6B6B; --text-light: #8A8A8A; --white: #FFFFFF;
+            --shadow-soft: 0 4px 20px rgba(0,0,0,0.06); --shadow-light: 0 2px 12px rgba(0,0,0,0.04);
+            --whatsapp: #25D366;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Helvetica Neue', 'PingFang TC', sans-serif; background: var(--cream); color: var(--text-dark); line-height: 1.8; font-weight: 300; }
+        a { text-decoration: none; color: inherit; }
+        
+        /* Nav */
+        .navbar { position: fixed; top: 0; width: 100%; background: rgba(255,255,255,0.95); padding: 14px 5%; display: flex; justify-content: space-between; align-items: center; z-index: 1000; box-shadow: var(--shadow-light); }
+        .logo { font-size: 18px; font-weight: 300; letter-spacing: 0.12em; }
+        .logo span { font-weight: 500; color: var(--brown-light); }
+        .nav-links { display: flex; gap: 24px; }
+        .nav-links a { font-size: 12px; color: var(--text-soft); transition: 0.3s; }
+        .nav-links a:hover { color: var(--brown-light); }
+        .book-btn { background: var(--brown-light); color: var(--white); padding: 8px 18px; border: none; border-radius: 18px; font-size: 12px; cursor: pointer; }
+        .mobile-menu { display: none; font-size: 20px; cursor: pointer; }
+        
+        /* Hero */
+        .hero { height: 85vh; min-height: 480px; background: linear-gradient(135deg, rgba(250,248,245,0.92), rgba(245,240,232,0.88)), url('https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1920&q=80') center/cover; display: flex; align-items: center; justify-content: center; }
+        .hero-content { text-align: center; padding: 30px; }
+        .hero h1 { font-size: clamp(28px, 5vw, 44px); letter-spacing: 0.18em; font-weight: 200; }
+        .hero h1 span { color: var(--brown-light); }
+        .hero .subtitle { font-size: 13px; color: var(--text-light); margin: 14px 0 24px; }
+        .btn { padding: 12px 26px; border: none; border-radius: 22px; font-size: 12px; cursor: pointer; transition: 0.3s; display: inline-block; }
+        .btn-primary { background: var(--brown-light); color: var(--white); }
+        .btn-outline { border: 1px solid var(--milk-tea); }
+        
+        /* Sections */
+        section { padding: 60px 5%; }
+        .section-title { text-align: center; margin-bottom: 40px; }
+        .section-title h2 { font-size: clamp(20px, 3vw, 26px); font-weight: 300; letter-spacing: 0.12em; }
+        .section-title p { color: var(--text-light); font-size: 12px; }
+        .gold-line { width: 32px; height: 1px; background: var(--milk-tea); margin: 12px auto 0; }
+        
+        /* Services */
+        .services-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; max-width: 900px; margin: 0 auto; }
+        .service-card { background: var(--white); padding: 28px 20px; text-align: center; border-radius: 10px; border: 1px solid var(--beige); transition: 0.3s; }
+        .service-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-soft); }
+        .service-card h3 { font-size: 14px; font-weight: 400; margin-bottom: 6px; }
+        .service-card p { color: var(--text-light); font-size: 11px; margin-bottom: 10px; }
+        .service-price { font-size: 18px; color: var(--brown-light); }
+        
+        /* Team */
+        .team-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; max-width: 900px; margin: 0 auto; }
+        .team-card { background: var(--white); border-radius: 10px; border: 1px solid var(--beige); overflow: hidden; }
+        .team-img { height: 180px; background: linear-gradient(145deg, var(--beige), var(--milk-tea)); display: flex; align-items: center; justify-content: center; font-size: 50px; }
+        .team-info { padding: 16px; text-align: center; }
+        .team-info h3 { font-size: 14px; font-weight: 400; }
+        .team-info .title { color: var(--brown-light); font-size: 11px; margin-top: 4px; }
+        
+        /* Portfolio */
+        .portfolio-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; max-width: 1000px; margin: 0 auto; }
+        .portfolio-item { background: var(--white); border-radius: 10px; border: 1px solid var(--beige); overflow: hidden; }
+        .portfolio-img { height: 160px; background: var(--beige); display: flex; align-items: center; justify-content: center; font-size: 36px; }
+        .portfolio-info { padding: 14px; }
+        .portfolio-info h4 { font-size: 13px; font-weight: 400; margin-bottom: 4px; }
+        .portfolio-info p { color: var(--text-light); font-size: 11px; }
+        
+        /* Products */
+        .products-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; max-width: 900px; margin: 0 auto; }
+        .product-card { background: var(--white); border-radius: 10px; padding: 20px; text-align: center; border: 1px solid var(--beige); }
+        .product-img { width: 70px; height: 70px; background: var(--beige); border-radius: 50%; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+        .product-card h3 { font-size: 13px; font-weight: 400; }
+        .product-card p { color: var(--text-light); font-size: 11px; margin-top: 4px; }
+        
+        /* Booking */
+        .booking { background: linear-gradient(180deg, var(--beige), var(--cream-light)); }
+        .booking-form { max-width: 440px; margin: 0 auto; background: var(--white); padding: 32px 28px; border-radius: 14px; box-shadow: var(--shadow-soft); }
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 12px; color: var(--text-soft); margin-bottom: 5px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--beige-dark); border-radius: 8px; font-size: 13px; background: var(--cream-light); }
+        .form-group input:focus, .form-group select:focus { border-color: var(--brown-light); outline: none; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .submit-btn { width: 100%; padding: 12px; background: var(--brown-light); color: var(--white); border: none; border-radius: 22px; font-size: 12px; cursor: pointer; margin-top: 6px; }
+        .booking-result { display: none; text-align: center; padding: 24px; }
+        .booking-result.show { display: block; }
+        .result-icon { font-size: 42px; }
+        
+        /* Contact + Map */
+        .contact-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; max-width: 700px; margin: 0 auto 24px; }
+        .contact-item { text-align: center; }
+        .contact-item h3 { font-size: 13px; font-weight: 400; margin-bottom: 6px; }
+        .contact-item p { color: var(--text-light); font-size: 12px; }
+        .map-container { max-width: 900px; margin: 0 auto; border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-light); }
+        .map-iframe { width: 100%; height: 300px; border: none; }
+        
+        /* Footer */
+        footer { background: var(--white); padding: 36px 5%; text-align: center; border-top: 1px solid var(--beige); }
+        footer .logo { font-size: 16px; margin-bottom: 14px; display: inline-block; }
+        footer p { color: var(--text-light); font-size: 11px; }
+        
+        /* Floating WhatsApp */
+        .float-wa { position: fixed; bottom: 20px; right: 20px; width: 50px; height: 50px; background: var(--whatsapp); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(37,211,102,0.35); z-index: 999; }
+        .float-wa a { color: var(--white); font-size: 26px; }
+        
+        /* Mobile */
+        @media (max-width: 768px) {
+            .nav-links { display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--white); flex-direction: column; padding: 18px; gap: 14px; }
+            .nav-links.active { display: flex; }
+            .mobile-menu { display: block; }
+            .book-btn { display: none; }
+            .hero { height: 75vh; }
+            .hero h1 { font-size: 24px; }
+            .btn { width: 100%; max-width: 180px; margin: 4px 0; }
+            .form-row { grid-template-columns: 1fr; }
+            .contact-grid { grid-template-columns: 1fr; gap: 16px; }
+            .map-iframe { height: 240px; }
+            .float-wa { width: 46px; height: 46px; }
+        }
+        html { scroll-behavior: smooth; }
+    </style>
+</head>
+<body>
+    <!-- Nav -->
+    <nav class="navbar">
+        <div class="logo">VIVA <span>HAIR</span></div>
+        <div class="nav-links" id="navLinks">
+            <a href="#home">Home</a>
+            <a href="#services">服務</a>
+            <a href="#team">髮型師</a>
+            <a href="#portfolio">作品</a>
+            <a href="#products">產品</a>
+            <a href="#booking">預約</a>
+            <a href="#contact">聯絡</a>
+        </div>
+        <button class="book-btn" onclick="document.getElementById('booking').scrollIntoView({behavior:'smooth'})">預約</button>
+        <div class="mobile-menu" onclick="document.getElementById('navLinks').classList.toggle('active')">☰</div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero" id="home">
+        <div class="hero-content">
+            <h1>VIVA <span>HAIR</span></h1>
+            <p class="subtitle">為您打造自然舒適的完美造型</p>
+            <div>
+                <a href="#booking" class="btn btn-primary">線上預約</a>
+                <a href="#services" class="btn btn-outline">查看服務</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Services -->
+    <section class="services" id="services">
+        <div class="section-title"><h2>Services</h2><p>專業髮型服務</p><div class="gold-line"></div></div>
+        <div class="services-grid" id="servicesGrid"></div>
+    </section>
+
+    <!-- Team -->
+    <section class="team" id="team">
+        <div class="section-title"><h2>Stylist</h2><p>專業髮型師團隊</p><div class="gold-line"></div></div>
+        <div class="team-grid" id="teamGrid"></div>
+    </section>
+
+    <!-- Portfolio -->
+    <section class="services" id="portfolio">
+        <div class="section-title"><h2>Portfolio</h2><p>髮型作品展示</p><div class="gold-line"></div></div>
+        <div class="portfolio-grid" id="portfolioGrid"></div>
+    </section>
+
+    <!-- Products -->
+    <section class="team" id="products">
+        <div class="section-title"><h2>Products</h2><p>專業髮品介紹</p><div class="gold-line"></div></div>
+        <div class="products-grid" id="productsGrid"></div>
+    </section>
+
+    <!-- Booking -->
+    <section class="booking" id="booking">
+        <div class="section-title"><h2>Reservation</h2><p>預約服務</p><div class="gold-line"></div></div>
+        <div class="booking-form">
+            <form id="bookingForm" onsubmit="submitBooking(event)">
+                <div class="form-group"><label>選擇服務</label><select id="serviceSelect" required><option value="">請選擇服務</option></select></div>
+                <div class="form-group"><label>選擇髮型師</label><select id="designerSelect" required><option value="">請選擇髮型師</option></select></div>
+                <div class="form-row">
+                    <div class="form-group"><label>日期</label><input type="date" id="dateInput" required></div>
+                    <div class="form-group"><label>時間</label><select id="timeSelect" required><option value="">請選擇時間</option></select></div>
+                </div>
+                <div class="form-group"><label>姓名</label><input type="text" id="nameInput" placeholder="請輸入姓名" required></div>
+                <div class="form-group"><label>電話</label><input type="tel" id="phoneInput" placeholder="9/8/7/6開頭" pattern="[6789]\d{7}" required></div>
+                <div class="form-group"><label>備註</label><textarea id="remarkInput" rows="2" placeholder="特別要求"></textarea></div>
+                <button type="submit" class="submit-btn">確認預約</button>
+            </form>
+            <div class="booking-result" id="bookingResult">
+                <div class="result-icon">✓</div>
+                <h3>預約成功</h3>
+                <p>編號: <span id="resultId"></span></p>
+                <p style="margin-top:10px;font-size:12px;color:var(--text-light);">我們會盡快與您確認</p>
+                <button class="btn btn-primary" onclick="resetBooking()" style="margin-top:18px;">再次預約</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact + Map -->
+    <section class="services" id="contact">
+        <div class="section-title"><h2>Contact</h2><p>聯絡我們</p><div class="gold-line"></div></div>
+        <div class="contact-grid">
+            <div class="contact-item"><h3>地址</h3><p>九龍太子通菜街17A 1樓</p></div>
+            <div class="contact-item"><h3>電話</h3><p>+852 1234 5678</p></div>
+            <div class="contact-item"><h3>營業</h3><p>10:00 - 20:00</p></div>
+        </div>
+        <div class="map-container">
+            <iframe class="map-iframe" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1845.7568536374782!2d114.1574!3d22.3181!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMjLCsDE5JzA4LjAiTiAxMTRCsDA5JzI0LjAiRQ!5e0!3m2!1szh-TW!2shk!4v1234567890" allowfullscreen loading="lazy"></iframe>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="logo">VIVA <span>HAIR</span></div>
+        <p>© 2026 VIVA HAIR. All rights reserved.</p>
+    </footer>
+
+    <!-- Floating WhatsApp -->
+    <div class="float-wa"><a href="https://wa.me/85212345678" target="_blank">💬</a></div>
+
+    <script>
+        // 配置
+        function getConfig() {
+            const saved = localStorage.getItem('VIVA_config');
+            const defaults = {
+                services: {
+                    'cut': { name: '剪髮', price: 280, duration: 60, active: true },
+                    'color': { name: '染髮', price: 680, duration: 120, active: true },
+                    'perm': { name: '燙髮', price: 880, duration: 120, active: true },
+                    'treatment': { name: '護髮', price: 380, duration: 60, active: true }
+                },
+                staff: {
+                    'mark': { name: 'Mark', title: '創意總監', startHour: 10, endHour: 19, active: true },
+                    'sophia': { name: 'Sophia', title: '高級髮型師', startHour: 11, endHour: 20, active: true },
+                    'jack': { name: 'Jack', title: '資深髮型師', startHour: 10, endHour: 18, active: true }
+                },
+                portfolio: [
+                    { title: 'OL自然卷', desc: '韓式燙髮' },
+                    { title: '漸變染髮', desc: '巴黎畫染' },
+                    { title: '短髮造型', desc: '波波頭' },
+                    { title: '男士精剪', desc: '商務造型' }
+                ],
+                products: [
+                    { name: 'Kerastase', desc: '法國專業護髮' },
+                    { name: 'Shiseido', desc: '日本頂級髮品' },
+                    { name: 'Milbon', desc: '日系沙龍專用' }
+                ]
+            };
+            return saved ? JSON.parse(saved) : defaults;
+        }
+        const CONFIG = getConfig();
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadServices(); loadStaff(); loadPortfolio(); loadProducts(); initDate();
+        });
+
+        function loadServices() {
+            const grid = document.getElementById('servicesGrid');
+            const select = document.getElementById('serviceSelect');
+            grid.innerHTML = ''; select.innerHTML = '<option value="">請選擇服務</option>';
+            for (const [id, s] of Object.entries(CONFIG.services)) {
+                if (s.active) {
+                    grid.innerHTML += `<div class="service-card"><h3>${s.name}</h3><p>專業服務</p><div class="service-price">$${s.price}</div></div>`;
+                    select.innerHTML += `<option value="${id}">${s.name} - $${s.price}</option>`;
+                }
+            }
+        }
+
+        function loadStaff() {
+            const grid = document.getElementById('teamGrid');
+            const select = document.getElementById('designerSelect');
+            grid.innerHTML = ''; select.innerHTML = '<option value="">請選擇髮型師</option>';
+            for (const [id, s] of Object.entries(CONFIG.staff)) {
+                if (s.active) {
+                    grid.innerHTML += `<div class="team-card"><div class="team-img">👤</div><div class="team-info"><h3>${s.name}</h3><div class="title">${s.title}</div></div></div>`;
+                    select.innerHTML += `<option value="${id}">${s.name}</option>`;
+                }
+            }
+        }
+
+        function loadPortfolio() {
+            document.getElementById('portfolioGrid').innerHTML = CONFIG.portfolio.map(p => `
+                <div class="portfolio-item"><div class="portfolio-img">💇</div><div class="portfolio-info"><h4>${p.title}</h4><p>${p.desc}</p></div></div>
+            `).join('');
+        }
+
+        function loadProducts() {
+            document.getElementById('productsGrid').innerHTML = CONFIG.products.map(p => `
+                <div class="product-card"><div class="product-img">🧴</div><h3>${p.name}</h3><p>${p.desc}</p></div>
+            `).join('');
+        }
+
+        function initDate() {
+            const d = document.getElementById('dateInput');
+            const now = new Date();
+            const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+            const max = new Date(); max.setDate(now.getDate() + 30);
+            d.setAttribute('min', today); d.setAttribute('max', max.toISOString().split('T')[0]);
+            d.addEventListener('change', loadSlots);
+            document.getElementById('designerSelect').addEventListener('change', loadSlots);
+        }
+
+        // 時間鎖定系統
+        function isLocked(date, time, staffId, duration) {
+            const bookings = JSON.parse(localStorage.getItem('VIVA_bookings') || '[]');
+            const start = parseInt(time.split(':')[0]);
+            const end = start + Math.ceil(duration / 60);
+            for (const b of bookings) {
+                if (b.date !== date || b.staff !== staffId) continue;
+                const bStart = parseInt(b.time.split(':')[0]);
+                const bService = CONFIG.services[b.service] || { duration: 60 };
+                const bEnd = bStart + Math.ceil(bService.duration / 60);
+                if (start < bEnd && end > bStart) return true;
+            }
+            return false;
+        }
+
+        function loadSlots() {
+            const date = document.getElementById('dateInput').value;
+            const staffId = document.getElementById('designerSelect').value;
+            const select = document.getElementById('timeSelect');
+            if (!date || !staffId) { select.innerHTML = '<option value="">請先選擇日期和髮型師</option>'; return; }
+            const staff = CONFIG.staff[staffId];
+            select.innerHTML = '<option value="">請選擇時間</option>';
+            for (let h = staff.startHour; h < staff.endHour; h++) {
+                const time = `${h.toString().padStart(2,'0')}:00`;
+                const opt = document.createElement('option');
+                opt.value = time;
+                let locked = false;
+                for (const [sid, svc] of Object.entries(CONFIG.services)) {
+                    if (svc.active && isLocked(date, time, staffId, svc.duration)) { locked = true; break; }
+                }
+                if (locked) { opt.disabled = true; opt.textContent = `${time} (已預約)`; }
+                else opt.textContent = time;
+                select.appendChild(opt);
+            }
+        }
+
+        // 提交預約
+        function submitBooking(e) {
+            e.preventDefault();
+            const serviceId = document.getElementById('serviceSelect').value;
+            const staffId = document.getElementById('designerSelect').value;
+            const date = document.getElementById('dateInput').value;
+            const time = document.getElementById('timeSelect').value;
+            const phone = document.getElementById('phoneInput').value;
+            const service = CONFIG.services[serviceId];
+            
+            if (!/^[6789]\d{7}$/.test(phone)) { alert('請輸入有效的電話號碼'); return; }
+            if (isLocked(date, time, staffId, service.duration)) { alert('該時段已被預約！'); loadSlots(); return; }
+            
+            const booking = {
+                id: 'BK' + Date.now().toString().slice(-8),
+                service: serviceId, serviceName: service.name, serviceDuration: service.duration, price: service.price,
+                staff: staffId, staffName: CONFIG.staff[staffId].name, date, time,
+                customer: { name: document.getElementById('nameInput').value, phone, remark: document.getElementById('remarkInput').value },
+                createdAt: new Date().toISOString()
+            };
+            
+            const bookings = JSON.parse(localStorage.getItem('VIVA_bookings') || '[]');
+            if (isLocked(date, time, staffId, service.duration)) { alert('該時段已被預約！'); loadSlots(); return; }
+            bookings.push(booking);
+            localStorage.setItem('VIVA_bookings', JSON.stringify(bookings));
+            
+            document.getElementById('bookingForm').style.display = 'none';
+            document.getElementById('bookingResult').classList.add('show');
+            document.getElementById('resultId').textContent = booking.id;
+        }
+
+        function resetBooking() {
+            document.getElementById('bookingForm').reset();
+            document.getElementById('bookingForm').style.display = 'block';
+            document.getElementById('bookingResult').classList.remove('show');
+        }
+    </script>
+</body>
+</html>
