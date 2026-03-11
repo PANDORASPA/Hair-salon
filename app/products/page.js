@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { supabase } from '../../lib/supabase'
 
 const products = [
   { id: 1, name: 'DS100 護髮精華素', category: '護理', price: 680, orig: 880, desc: '深層修復受損髮質，令頭髮更強韌', img: '💆', popular: true },
@@ -90,7 +91,7 @@ export default function Products() {
     setCheckoutStep(1)
   }
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     // 驗證
     if (!formData.name || !formData.phone) {
       alert('請填寫聯絡資料')
@@ -104,30 +105,41 @@ export default function Products() {
     // 建立訂單
     const order = {
       ref,
-      userId: user.id,
-      userName: user.name,
-      items: cart,
+      user_id: user.id,
+      user_name: user.name,
+      items: JSON.stringify(cart),
       total: finalTotal,
       delivery: formData.delivery,
       payment: formData.payment,
-      address: formData.address,
+      address: formData.address || null,
       status: 'pending',
-      createdAt: new Date().toISOString()
+      created_at: new Date().toISOString()
     }
 
-    // 保存訂單
-    const orders = JSON.parse(localStorage.getItem('viva_orders') || '[]')
-    orders.push(order)
-    localStorage.setItem('viva_orders', JSON.stringify(orders))
+    // 保存訂單到 Supabase
+    const { error: orderError } = await supabase
+      .from('orders')
+      .insert([order])
+
+    if (orderError) {
+      console.error('Error creating order:', orderError)
+      alert('訂單失敗，請稍後再試')
+      return
+    }
 
     // 更新用戶積分
     const pointsEarned = Math.floor(finalTotal)
-    const users = JSON.parse(localStorage.getItem('viva_users') || '[]')
-    const userIndex = users.findIndex(u => u.id === user.id)
-    if (userIndex !== -1) {
-      users[userIndex].points = (users[userIndex].points || 0) + pointsEarned
-      localStorage.setItem('viva_users', JSON.stringify(users))
-      localStorage.setItem('viva_current_user', JSON.stringify(users[userIndex]))
+    const { data: currentUser } = await supabase
+      .from('users')
+      .select('points')
+      .eq('id', user.id)
+      .single()
+
+    if (currentUser) {
+      await supabase
+        .from('users')
+        .update({ points: (currentUser.points || 0) + pointsEarned })
+        .eq('id', user.id)
     }
 
     // 清空購物車
