@@ -26,6 +26,17 @@ export default function Booking() {
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
   const [formData, setFormData] = useState({ name: '', phone: '', coupon: '' })
   const [bookingRef, setBookingRef] = useState('')
+  const [staffList, setStaffList] = useState([])
+  const [selectedStaff, setSelectedStaff] = useState('')
+
+  // Fetch staff from Supabase
+  useEffect(() => {
+    async function fetchStaff() {
+      const { data } = await supabase.from('staff').select('*').eq('enabled', true).order('name')
+      if (data) setStaffList(data)
+    }
+    fetchStaff()
+  }, [])
 
   const timeSlots = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00']
 
@@ -78,6 +89,8 @@ export default function Booking() {
       ref,
       service: selectedService.name,
       service_price: selectedService.price,
+      staff_id: selectedStaff || null,
+      staff_name: staffList.find(s => s.id == selectedStaff)?.name || null,
       date: `${selectedDate}/${currentMonth + 1}/${currentYear}`,
       time: selectedTime,
       name: formData.name,
@@ -220,6 +233,48 @@ export default function Booking() {
               ))}
             </div>
           </div>
+
+          {/* Staff Selection */}
+          {staffList.length > 0 && (
+            <div style={{ marginTop: '16px' }}>
+              <h4 style={{ marginBottom: '10px', fontSize: '15px' }}>選擇髮型師</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                <div
+                  onClick={() => setSelectedStaff('')}
+                  style={{
+                    padding: '14px',
+                    background: selectedStaff === '' ? '#A68B6A' : '#fff',
+                    color: selectedStaff === '' ? '#fff' : '#333',
+                    border: '1px solid ' + (selectedStaff === '' ? '#A68B6A' : '#e5e7eb'),
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    textAlign: 'center',
+                    fontSize: '14px'
+                  }}
+                >
+                  隨機安排
+                </div>
+                {staffList.map(s => (
+                  <div
+                    key={s.id}
+                    onClick={() => setSelectedStaff(s.id.toString())}
+                    style={{
+                      padding: '14px',
+                      background: selectedStaff === s.id.toString() ? '#A68B6A' : '#fff',
+                      color: selectedStaff === s.id.toString() ? '#fff' : '#333',
+                      border: '1px solid ' + (selectedStaff === s.id.toString() ? '#A68B6A' : '#e5e7eb'),
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      fontSize: '14px'
+                    }}
+                  >
+                    {s.name}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Form - Mobile Optimized */}
           <div style={{ background: '#fff', padding: '16px', borderRadius: '16px', marginTop: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
