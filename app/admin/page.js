@@ -709,4 +709,25 @@ export default function Admin() {
         </div>}
 
         {activeTab === 'coupons' && <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}><h3>🏷️ 優惠</h3><button onClick={addCoupon} style={{ padding: '6px 12px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '6px' }}>+ 新增</button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}><h3>🏷️ 優惠</h3><button onClick={addCoupon} style={{ padding: '6px 12px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '6px' }}>+ 新增</button></div>
+          {coupons.map((c, i) => <div key={c.id} style={{ display: 'flex', gap: '8px', alignItems: 'center', padding: '10px', background: '#fff', borderRadius: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+            <input type="checkbox" checked={c.enabled} onChange={e => { const n = [...coupons]; n[i].enabled = e.target.checked; setCoupons(n) }} />
+            <input type="text" value={c.code} onChange={e => { const n = [...coupons]; n[i].code = e.target.value.toUpperCase(); setCoupons(n) }} placeholder="CODE" style={{ width: '70px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px', textTransform: 'uppercase' }} />
+            <input type="text" value={c.name} onChange={e => { const n = [...coupons]; n[i].name = e.target.value; setCoupons(n) }} placeholder="優惠名稱" style={{ flex: '1 1 100px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
+            <select value={c.type || 'percent'} onChange={e => { const n = [...coupons]; n[i].type = e.target.value; setCoupons(n) }} style={{ padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }}>
+              <option value="percent">% 折</option>
+              <option value="fixed">減$</option>
+            </select>
+            <input type="number" value={c.discount} onChange={e => { const n = [...coupons]; n[i].discount = parseInt(e.target.value); setCoupons(n) }} placeholder="金額" style={{ width: '50px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
+            <input type="number" value={c.min_spend || 0} onChange={e => { const n = [...coupons]; n[i].min_spend = parseInt(e.target.value); setCoupons(n) }} placeholder="最低消費" style={{ width: '70px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
+          </div>)}
+          <button onClick={saveCoupons} disabled={saving} style={{ width: '100%', padding: '12px', background: saving ? '#ccc' : '#A68B6A', color: '#fff', border: 'none', borderRadius: '8px' }}>{saving ? '保存中...' : '保存'}</button>
+        </div>}
+
+        {activeTab === 'customers' && <div style={{ background: '#fff', borderRadius: '10px', overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}><thead><tr style={{ background: '#FAF8F5' }}><th style={{ padding: '10px', textAlign: 'left' }}>姓名</th><th style={{ padding: '10px', textAlign: 'left' }}>電話</th><th style={{ padding: '10px', textAlign: 'left' }}>電郵</th><th style={{ padding: '10px', textAlign: 'left' }}>積分</th></tr></thead><tbody>{users.map(u => <tr key={u.id} style={{ borderBottom: '1px solid #f5f5f5' }}><td style={{ padding: '10px' }}>{u.name}</td><td style={{ padding: '10px' }}>{u.phone}</td><td style={{ padding: '10px' }}>{u.email}</td><td style={{ padding: '10px' }}>{u.points || 0}</td></tr>)}</tbody></table>
+        </div>}
+      </div>
+    </div>
+  )
+}
