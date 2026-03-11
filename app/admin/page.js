@@ -171,7 +171,7 @@ export default function Admin() {
 
   const addService = () => {
     const newId = Math.max(...services.map(s => s.id), 0) + 1
-    setServices([...services, { id: newId, name: '新服務', price: 0, time: 60, enabled: true }])
+    setServices([...services, { id: newId, name: '新服務', price: 0, time: 60, emoji: '✂️', category: '', description: '', enabled: true }])
   }
 
   const saveCoupons = async () => {
@@ -329,55 +329,6 @@ export default function Admin() {
           ))}
           <button onClick={saveStaff} disabled={saving} style={{ width: '100%', padding: '14px', background: saving ? '#ccc' : '#A68B6A', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 600 }}>{saving ? '保存中...' : '💾 保存所有員工'}</button>
         </div>}
-                  return (
-                    <div key={idx} onClick={() => setSelectedStaff(selectedStaff === s.id && dateKey === selectedStaff?.dateKey ? null : { staffId: s.id, dateKey })}
-                      style={{ 
-                        minHeight: '60px', 
-                        padding: '4px', 
-                        background: isOff ? '#ef4444' : daySchedule?.start ? '#dcfce7' : '#fafafa', 
-                        borderRadius: '4px', 
-                        border: isToday ? '2px solid #A68B6A' : '1px solid #eee',
-                        cursor: 'pointer',
-                        fontSize: '10px'
-                      }}>
-                      <div style={{ fontWeight: isToday ? 700 : 400 }}>{date.getDate()}</div>
-                      {isOff ? (
-                        <div style={{ color: '#fff', fontSize: '9px' }}>放假</div>
-                      ) : daySchedule?.start ? (
-                        <div style={{ color: '#166534', fontSize: '9px' }}>{daySchedule.start}-{daySchedule.end}</div>
-                      ) : (
-                        <div style={{ color: '#999', fontSize: '9px' }}>休息</div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-              
-              {/* Day editor popup */}
-              {selectedStaff?.staffId === s.id && (
-                <div style={{ marginTop: '8px', padding: '10px', background: '#f5f5f5', borderRadius: '6px' }}>
-                  <div style={{ fontSize: '11px', marginBottom: '6px' }}>設定 {selectedStaff.dateKey}：</div>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                    <label style={{ fontSize: '11px' }}>開始：</label>
-                    <input type="time" value={s.schedule?.[selectedStaff.dateKey]?.start || ''} 
-                      onChange={e => updateDailySchedule(s.id, selectedStaff.dateKey, 'start', e.target.value)}
-                      style={{ padding: '4px', fontSize: '11px', border: '1px solid #ddd', borderRadius: '4px' }} />
-                    <label style={{ fontSize: '11px' }}>收工：</label>
-                    <input type="time" value={s.schedule?.[selectedStaff.dateKey]?.end || ''} 
-                      onChange={e => updateDailySchedule(s.id, selectedStaff.dateKey, 'end', e.target.value)}
-                      style={{ padding: '4px', fontSize: '11px', border: '1px solid #ddd', borderRadius: '4px' }} />
-                    <button onClick={() => toggleDailyOff(s.id, selectedStaff.dateKey)}
-                      style={{ padding: '4px 8px', background: s.daysOff?.includes(selectedStaff.dateKey) ? '#ef4444' : '#666', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '10px' }}>
-                      {s.daysOff?.includes(selectedStaff.dateKey) ? '取消放假' : '放假'}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>)}
-          <button onClick={saveStaff} disabled={saving} style={{ width: '100%', padding: '12px', background: saving ? '#ccc' : '#A68B6A', color: '#fff', border: 'none', borderRadius: '8px' }}>{saving ? '保存中...' : '保存員工'}</button>
-        </div>}
-
         {activeTab === 'bookings' && <div>
           <div style={{ background: '#fff', padding: '10px', borderRadius: '10px', marginBottom: '10px', display: 'flex', gap: '8px' }}>
             <input type="text" placeholder="搜尋" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
@@ -390,15 +341,61 @@ export default function Admin() {
         </div>}
 
         {activeTab === 'services' && <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}><h3>✂️ 服務</h3><button onClick={addService} style={{ padding: '6px 12px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '6px' }}>+ 新增</button></div>
-          {services.map((s, i) => <div key={s.id} style={{ display: 'flex', gap: '8px', alignItems: 'center', padding: '10px', background: '#fff', borderRadius: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
-            <input type="checkbox" checked={s.enabled} onChange={e => { const n = [...services]; n[i].enabled = e.target.checked; setServices(n) }} />
-            <input type="text" value={s.name} onChange={e => { const n = [...services]; n[i].name = e.target.value; setServices(n) }} placeholder="服務名稱" style={{ flex: '1 1 120px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
-            <input type="number" value={s.price} onChange={e => { const n = [...services]; n[i].price = parseInt(e.target.value); setServices(n) }} placeholder="價格" style={{ width: '70px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
-            <input type="number" value={s.time || 60} onChange={e => { const n = [...services]; n[i].time = parseInt(e.target.value); setServices(n) }} placeholder="分鐘" style={{ width: '60px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
-            <span style={{ fontSize: '12px', color: '#666' }}>分鐘</span>
-          </div>)}
-          <button onClick={saveServices} disabled={saving} style={{ width: '100%', padding: '12px', background: saving ? '#ccc' : '#A68B6A', color: '#fff', border: 'none', borderRadius: '8px' }}>{saving ? '保存中...' : '保存'}</button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}><h3>✂️ 服務設定</h3><button onClick={addService} style={{ padding: '8px 16px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '6px' }}>+ 新增服務</button></div>
+          {services.length === 0 && <div style={{ padding: '40px', textAlign: 'center', color: '#999', background: '#fff', borderRadius: '10px' }}>尚未有服務資料<br/><button onClick={addService} style={{ marginTop: '10px', padding: '8px 16px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '6px' }}>+ 新增服務</button></div>}
+          {services.map((sv, i) => (
+            <div key={sv.id} style={{ background: '#fff', borderRadius: '12px', marginBottom: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+              {/* Header */}
+              <div style={{ padding: '16px', borderBottom: '1px solid #f0f0f0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '50px', height: '50px', borderRadius: '12px', background: '#FAF8F5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
+                    {sv.emoji || '✂️'}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input type="text" value={sv.name} onChange={e => { const n = [...services]; n[i].name = e.target.value; setServices(n) }} placeholder="服務名稱" style={{ fontSize: '16px', fontWeight: 600, padding: '6px 8px', border: '1px solid #eee', borderRadius: '6px', width: '120px' }} />
+                      <select value={sv.category || ''} onChange={e => { const n = [...services]; n[i].category = e.target.value; setServices(n) }} style={{ padding: '6px 8px', border: '1px solid #eee', borderRadius: '6px', fontSize: '13px' }}>
+                        <option value="">分類</option>
+                        <option value="剪髮">剪髮</option>
+                        <option value="染髮">染髮</option>
+                        <option value="燙髮">燙髮</option>
+                        <option value="護髮">護髮</option>
+                        <option value="头皮护理">头皮护理</option>
+                      </select>
+                    </div>
+                    <input type="text" value={sv.description || ''} onChange={e => { const n = [...services]; n[i].description = e.target.value; setServices(n) }} placeholder="服務描述 (可留空)" style={{ marginTop: '6px', padding: '6px 8px', border: '1px solid #eee', borderRadius: '6px', fontSize: '13px', width: '100%' }} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={sv.enabled} onChange={e => { const n = [...services]; n[i].enabled = e.target.checked; setServices(n) }} />
+                      啟用
+                    </label>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Price & Time */}
+              <div style={{ padding: '12px 16px', background: '#fafafa', display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '13px', color: '#666' }}>💰 價格</span>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <span style={{ fontSize: '14px', color: '#A68B6A', fontWeight: 600 }}>$</span>
+                    <input type="number" value={sv.price} onChange={e => { const n = [...services]; n[i].price = parseInt(e.target.value) || 0; setServices(n) }} style={{ width: '70px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px' }} />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '13px', color: '#666' }}>⏱️ 時間</span>
+                  <input type="number" value={sv.time || 60} onChange={e => { const n = [...services]; n[i].time = parseInt(e.target.value) || 60; setServices(n) }} style={{ width: '60px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px' }} />
+                  <span style={{ fontSize: '13px', color: '#666' }}>分鐘</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '13px', color: '#666' }}>🏷️ Emoji</span>
+                  <input type="text" value={sv.emoji || ''} onChange={e => { const n = [...services]; n[i].emoji = e.target.value; setServices(n) }} placeholder="✂️" style={{ width: '50px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '16px', textAlign: 'center' }} />
+                </div>
+              </div>
+            </div>
+          ))}
+          <button onClick={saveServices} disabled={saving} style={{ width: '100%', padding: '14px', background: saving ? '#ccc' : '#A68B6A', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 600 }}>{saving ? '保存中...' : '💾 保存所有服務'}</button>
         </div>}
 
         {activeTab === 'coupons' && <div>
