@@ -17,17 +17,19 @@ export default function Booking() {
   const [formData, setFormData] = useState({ name: '', phone: '', coupon: '' })
   const [bookingRef, setBookingRef] = useState('')
   const [staffList, setStaffList] = useState([])
+  const [bookings, setBookings] = useState([])
   const [selectedStaff, setSelectedStaff] = useState('')
   const [loading, setLoading] = useState(true)
 
-  // Fetch services, coupons and staff from Supabase
+  // Fetch services, coupons, staff and bookings from Supabase
   useEffect(() => {
     async function fetchData() {
       setLoading(true)
-      const [servicesData, couponsData, staffData] = await Promise.all([
+      const [servicesData, couponsData, staffData, bookingsData] = await Promise.all([
         supabase.from('services').select('*').eq('enabled', true).order('sort_order'),
         supabase.from('coupons').select('*').eq('enabled', true),
-        supabase.from('staff').select('*').eq('enabled', true).order('name')
+        supabase.from('staff').select('*').eq('enabled', true).order('name'),
+        supabase.from('bookings').select('*')
       ])
       
       if (servicesData.data) {
@@ -57,6 +59,7 @@ export default function Booking() {
       }
       
       if (staffData.data) setStaffList(staffData.data)
+      if (bookingsData.data) setBookings(bookingsData.data)
       setLoading(false)
     }
     fetchData()
@@ -116,6 +119,18 @@ export default function Booking() {
     
     // Check if time is within working hours
     if (time && (time < daySchedule.start || time > daySchedule.end)) return false
+    
+    // Check if staff already has a booking at this time
+    if (date && time && staff.id) {
+      const dateStr = `${date}/${currentMonth + 1}/${currentYear}`
+      const existingBooking = bookings.find(b => 
+        b.staff_id === staff.id && 
+        b.date === dateStr && 
+        b.time === time &&
+        (b.status === 'pending' || b.status === 'confirmed')
+      )
+      if (existingBooking) return false
+    }
     
     return true
   }
