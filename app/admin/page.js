@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { supabase } from '../../lib/supabase'
 
 export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -9,6 +10,7 @@ export default function Admin() {
   const [error, setError] = useState('')
   const [bookings, setBookings] = useState([])
   const [activeTab, setActiveTab] = useState('bookings')
+  const [loading, setLoading] = useState(true)
   const router = useRouter()
 
   // 密碼 (可以改)
@@ -19,12 +21,24 @@ export default function Admin() {
     const auth = localStorage.getItem('viva_admin_auth')
     if (auth === 'true') {
       setIsAuthenticated(true)
+      fetchBookings()
+    } else {
+      setLoading(false)
     }
-    
-    // 讀取預約資料
-    const storedBookings = JSON.parse(localStorage.getItem('viva_bookings') || '[]')
-    setBookings(storedBookings.reverse())
   }, [])
+
+  const fetchBookings = async () => {
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('bookings')
+      .select('*')
+      .order('created_at', { ascending: false })
+    
+    if (data) {
+      setBookings(data)
+    }
+    setLoading(false)
+  }
 
   const handleLogin = (e) => {
     e.preventDefault()
