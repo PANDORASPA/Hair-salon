@@ -13,6 +13,10 @@ const faqs = [
 export default function FAQ() {
   const [openIndex, setOpenIndex] = useState(null)
 
+  const toggle = (index) => {
+    setOpenIndex(openIndex === index ? null : index)
+  }
+
   return (
     <>
       <section style={{ padding: '40px 0', background: '#FAF8F5', textAlign: 'center' }}>
@@ -23,12 +27,26 @@ export default function FAQ() {
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
           {faqs.map((faq, index) => (
             <div key={index} style={{ background: '#fff', borderRadius: '12px', marginBottom: '15px', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
-              <button onClick={() => setOpenIndex(openIndex === index ? null : index)} style={{ width: '100%', padding: '20px', background: 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div 
+                onClick={() => toggle(index)}
+                style={{ 
+                  width: '100%', 
+                  padding: '20px', 
+                  background: 'transparent', 
+                  border: 'none', 
+                  textAlign: 'left', 
+                  cursor: 'pointer', 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  userSelect: 'none'
+                }}
+              >
                 <span style={{ fontWeight: 600, fontSize: '16px' }}>{faq.q}</span>
-                <span style={{ fontSize: '20px', color: '#A68B6A' }}>{openIndex === index ? '−' : '+'}</span>
-              </button>
+                <span style={{ fontSize: '24px', color: '#A68B6A', fontWeight: 'bold' }}>{openIndex === index ? '−' : '+'}</span>
+              </div>
               {openIndex === index && (
-                <div style={{ padding: '0 20px 20px', color: '#666', lineHeight: 1.8 }}>
+                <div style={{ padding: '0 20px 20px', color: '#666', lineHeight: 1.8, borderTop: '1px solid #f0f0f0', marginTop: '-1px' }}>
                   {faq.a}
                 </div>
               )}
