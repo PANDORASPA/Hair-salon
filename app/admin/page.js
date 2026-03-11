@@ -28,6 +28,7 @@ export default function Admin() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [orderStatusFilter, setOrderStatusFilter] = useState('all')
   const [selectedStaffId, setSelectedStaffId] = useState(null)
+  const [selectedBooking, setSelectedBooking] = useState(null)
 
   const tabs = [
     { id: 'dashboard', name: '📊' },
@@ -526,15 +527,84 @@ export default function Admin() {
         </div>}
 
         {activeTab === 'bookings' && <div>
+          {/* Calendar View */}
+          <div style={{ background: '#fff', padding: '16px', borderRadius: '12px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <h4 style={{ margin: 0 }}>📅 預約月曆</h4>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', marginBottom: '8px' }}>
+              {['日', '一', '二', '三', '四', '五', '六'].map(d => <div key={d} style={{ textAlign: 'center', padding: '8px', background: '#f5f5f5', borderRadius: '4px', fontSize: '12px', fontWeight: 600 }}>{d}</div>)}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px' }}>
+              {(() => {
+                const firstDay = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getDay()
+                const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()
+                const today = new Date().getDate()
+                const currentMonth = new Date().getMonth()
+                const currentYear = new Date().getFullYear()
+                let cells = []
+                for (let i = 0; i < firstDay; i++) cells.push(<div key={'empty-' + i} style={{ minHeight: '50px' }}></div>)
+                for (let d = 1; d <= daysInMonth; d++) {
+                  const dayBookings = bookings.filter(b => {
+                    const [day, month, year] = b.date?.split('/') || []
+                    return parseInt(day) === d && parseInt(month) === currentMonth + 1 && parseInt(year) === currentYear
+                  })
+                  cells.push(
+                    <div key={d} style={{ minHeight: '50px', padding: '4px', background: d === today ? '#fef3c7' : dayBookings.length > 0 ? '#dcfce7' : '#fafafa', borderRadius: '4px', border: '1px solid #eee', cursor: 'pointer' }}
+                      onClick={() => dayBookings.length > 0 && setSelectedBooking(dayBookings[0])}>
+                      <div style={{ fontWeight: d === today ? 700 : 400, fontSize: '12px' }}>{d}</div>
+                      {dayBookings.length > 0 && <div style={{ fontSize: '9px', color: '#666' }}>{dayBookings.length}預約</div>}
+                    </div>
+                  )
+                }
+                return cells
+              })()}
+            </div>
+          </div>
+
+          {/* List View */}
           <div style={{ background: '#fff', padding: '10px', borderRadius: '10px', marginBottom: '10px', display: 'flex', gap: '8px' }}>
             <input type="text" placeholder="搜尋" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
             <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }}><option value="all">全部</option><option value="pending">待確認</option><option value="confirmed">已確認</option></select>
           </div>
           <div style={{ background: '#fff', borderRadius: '10px', overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}><thead><tr style={{ background: '#FAF8F5' }}><th style={{ padding: '8px', textAlign: 'left' }}>客戶</th><th style={{ padding: '8px', textAlign: 'left' }}>服務</th><th style={{ padding: '8px', textAlign: 'left' }}>髮型師</th><th style={{ padding: '8px', textAlign: 'left' }}>狀態</th><th style={{ padding: '8px', textAlign: 'left' }}></th></tr></thead>
-            <tbody>{filteredBookings.slice(0, 20).map(b => <tr key={b.id} style={{ borderBottom: '1px solid #f5f5f5' }}><td style={{ padding: '8px' }}>{b.name}<div style={{ fontSize: '10px', color: '#999' }}>{b.phone}</div></td><td style={{ padding: '8px', fontSize: '11px' }}>{b.service}</td><td style={{ padding: '8px' }}>{b.staff_name || '-'}</td><td style={{ padding: '8px' }}><select value={b.status} onChange={e => updateStatus(b.id, e.target.value)} style={{ padding: '4px', fontSize: '10px', background: b.status === 'pending' ? '#fef3c7' : '#dcfce7', borderRadius: '4px' }}><option value="pending">待確認</option><option value="confirmed">已確認</option><option value="completed">已完成</option></select></td><td style={{ padding: '8px' }}><button onClick={() => deleteBooking(b.id)} style={{ padding: '4px 6px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '10px' }}>刪</button></td></tr>)}</tbody></table>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}><thead><tr style={{ background: '#FAF8F5' }}><th style={{ padding: '8px', textAlign: 'left' }}>日期</th><th style={{ padding: '8px', textAlign: 'left' }}>客戶</th><th style={{ padding: '8px', textAlign: 'left' }}>服務</th><th style={{ padding: '8px', textAlign: 'left' }}>髮型師</th><th style={{ padding: '8px', textAlign: 'left' }}>狀態</th></tr></thead>
+            <tbody>{filteredBookings.slice(0, 30).map(b => <tr key={b.id} onClick={() => setSelectedBooking(b)} style={{ borderBottom: '1px solid #f5f5f5', cursor: 'pointer' }}><td style={{ padding: '8px' }}>{b.date}<div style={{ fontSize: '10px', color: '#999' }}>{b.time}</div></td><td style={{ padding: '8px' }}>{b.name}<div style={{ fontSize: '10px', color: '#999' }}>{b.phone}</div></td><td style={{ padding: '8px', fontSize: '11px' }}>{b.service}</td><td style={{ padding: '8px' }}>{b.staff_name || '-'}</td><td style={{ padding: '8px' }}><span style={{ padding: '4px 8px', background: b.status === 'pending' ? '#fef3c7' : b.status === 'confirmed' ? '#dbeafe' : '#dcfce7', borderRadius: '4px', fontSize: '10px' }}>{b.status === 'pending' ? '待確認' : b.status === 'confirmed' ? '已確認' : '已完成'}</span></td></tr>)}</tbody></table>
           </div>
         </div>}
+
+        {/* Booking Detail Modal */}
+        {selectedBooking && (
+          <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' }} onClick={() => setSelectedBooking(null)}>
+            <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', maxWidth: '400px', width: '100%' }} onClick={e => e.stopPropagation()}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h3 style={{ margin: 0 }}>預約詳情</h3>
+                <button onClick={() => setSelectedBooking(null)} style={{ padding: '8px', background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>✕</button>
+              </div>
+              <div style={{ background: '#fafafa', padding: '16px', borderRadius: '8px', marginBottom: '16px' }}>
+                <div style={{ marginBottom: '8px' }}><strong>預約編號：</strong>{selectedBooking.ref}</div>
+                <div style={{ marginBottom: '8px' }}><strong>日期時間：</strong>{selectedBooking.date} {selectedBooking.time}</div>
+                <div style={{ marginBottom: '8px' }}><strong>服務：</strong>{selectedBooking.service} (${selectedBooking.service_price})</div>
+                <div style={{ marginBottom: '8px' }}><strong>髮型師：</strong>{selectedBooking.staff_name || '隨機安排'}</div>
+                <div style={{ marginBottom: '8px' }}><strong>客戶：</strong>{selectedBooking.name}</div>
+                <div style={{ marginBottom: '8px' }}><strong>電話：</strong>{selectedBooking.phone}</div>
+                <div style={{ marginBottom: '8px' }}><strong>優惠：</strong>{selectedBooking.coupon || '無'}</div>
+                <div style={{ marginBottom: '8px' }}><strong>實收：</strong>${selectedBooking.final_price}</div>
+                <div><strong>狀態：</strong>
+                  <select value={selectedBooking.status} onChange={async (e) => { await updateStatus(selectedBooking.id, e.target.value); setSelectedBooking({...selectedBooking, status: e.target.value}) }} style={{ marginLeft: '8px', padding: '4px' }}>
+                    <option value="pending">待確認</option>
+                    <option value="confirmed">已確認</option>
+                    <option value="completed">已完成</option>
+                  </select>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button onClick={async () => { if(confirm('確定刪除？')) { await deleteBooking(selectedBooking.id); setSelectedBooking(null) }}} style={{ flex: 1, padding: '12px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>刪除預約</button>
+                <button onClick={() => setSelectedBooking(null)} style={{ flex: 1, padding: '12px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>關閉</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {activeTab === 'orders' && <div>
           <div style={{ background: '#fff', padding: '10px', borderRadius: '10px', marginBottom: '10px', display: 'flex', gap: '8px' }}>
