@@ -38,37 +38,37 @@ const tickets = [
 export default function Tickets() {
   return (
     <>
-      <section style={{ padding: '40px 0', background: '#FAF8F5', textAlign: 'center' }}>
-        <h1 style={{ fontSize: '36px', color: '#3D3D3D' }}>套票<span style={{ color: '#A68B6A' }}>優惠</span></h1>
-        <p style={{ color: '#666', marginTop: '10px' }}>購買套票更優惠，省錢又方便</p>
+      <section style={{ padding: '30px 16px', background: '#FAF8F5', textAlign: 'center' }}>
+        <h1 style={{ fontSize: '28px', color: '#3D3D3D' }}>套票<span style={{ color: '#A68B6A' }}>優惠</span></h1>
+        <p style={{ color: '#666', marginTop: '8px', fontSize: '14px' }}>購買套票更優惠，省錢又方便</p>
       </section>
 
-      <section style={{ padding: '60px 20px' }}>
+      <section style={{ padding: '24px 12px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '25px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
             {tickets.map(ticket => (
-              <div key={ticket.id} style={{ background: '#fff', border: ticket.popular ? '2px solid #A68B6A' : '1px solid #E8E0D5', borderRadius: '16px', padding: '30px', position: 'relative' }}>
+              <div key={ticket.id} style={{ background: '#fff', border: ticket.popular ? '2px solid #A68B6A' : '1px solid #E8E0D5', borderRadius: '16px', padding: '20px', position: 'relative' }}>
                 {ticket.popular && (
-                  <span style={{ position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', background: '#A68B6A', color: '#fff', padding: '6px 16px', borderRadius: '20px', fontSize: '12px', fontWeight: 600 }}>
+                  <span style={{ position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)', background: '#A68B6A', color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 600 }}>
                     最受欢迎
                   </span>
                 )}
-                <div style={{ height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', background: 'linear-gradient(135deg, #3D3D3D, #6B6B6B)', borderRadius: '12px', marginBottom: '20px', color: '#fff' }}>{ticket.img}</div>
-                <h3 style={{ fontSize: '24px', fontWeight: 600, marginBottom: '5px' }}>{ticket.name}</h3>
-                <p style={{ color: '#666', marginBottom: '20px' }}>{ticket.times}次服務</p>
-                <div style={{ marginBottom: '20px' }}>
-                  <span style={{ fontSize: '36px', fontWeight: 700, color: '#A68B6A' }}>${ticket.price}</span>
-                  <span style={{ color: '#999', textDecoration: 'line-through', marginLeft: '15px' }}>${ticket.orig}</span>
-                  <span style={{ color: '#34d399', marginLeft: '10px', fontWeight: 600 }}>慳${ticket.orig - ticket.price}</span>
+                <div style={{ height: '70px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', background: 'linear-gradient(135deg, #3D3D3D, #6B6B6B)', borderRadius: '10px', marginBottom: '16px', color: '#fff' }}>{ticket.img}</div>
+                <h3 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '4px' }}>{ticket.name}</h3>
+                <p style={{ color: '#666', marginBottom: '16px', fontSize: '14px' }}>{ticket.times}次服務</p>
+                <div style={{ marginBottom: '16px' }}>
+                  <span style={{ fontSize: '28px', fontWeight: 700, color: '#A68B6A' }}>${ticket.price}</span>
+                  <span style={{ color: '#999', textDecoration: 'line-through', marginLeft: '10px', fontSize: '14px' }}>${ticket.orig}</span>
+                  <span style={{ color: '#34d399', marginLeft: '8px', fontWeight: 600, fontSize: '14px' }}>慳${ticket.orig - ticket.price}</span>
                 </div>
-                <ul style={{ listStyle: 'none', marginBottom: '25px' }}>
+                <ul style={{ listStyle: 'none', marginBottom: '20px' }}>
                   {ticket.features.map((f, i) => (
-                    <li key={i} style={{ padding: '8px 0', color: '#666', borderBottom: '1px solid #f0f0f0' }}>
+                    <li key={i} style={{ padding: '6px 0', color: '#666', fontSize: '13px', borderBottom: '1px solid #f0f0f0' }}>
                       ✓ {f}
                     </li>
                   ))}
                 </ul>
-                <Link href="/booking" style={{ display: 'block', textAlign: 'center', padding: '15px', background: ticket.popular ? 'linear-gradient(135deg, #A68B6A, #8B7355)' : '#fff', color: ticket.popular ? '#fff' : '#A68B6A', border: '2px solid #A68B6A', borderRadius: '8px', textDecoration: 'none', fontWeight: 600 }}>
+                <Link href="/booking" style={{ display: 'block', textAlign: 'center', padding: '14px', background: ticket.popular ? 'linear-gradient(135deg, #A68B6A, #8B7355)' : '#fff', color: ticket.popular ? '#fff' : '#A68B6A', border: '2px solid #A68B6A', borderRadius: '8px', textDecoration: 'none', fontWeight: 600, fontSize: '14px' }}>
                   立即購買
                 </Link>
               </div>
