@@ -7,18 +7,18 @@ export default function Articles() {
 
   return (
     <>
-      <section style={{ padding: '40px 0', background: '#FAF8F5', textAlign: 'center' }}>
-        <h1 style={{ fontSize: '36px', color: '#3D3D3D' }}>文章<span style={{ color: '#A68B6A' }}>分享</span></h1>
+      <section style={{ padding: '30px 16px', background: '#FAF8F5', textAlign: 'center' }}>
+        <h1 style={{ fontSize: '28px', color: '#3D3D3D' }}>文章<span style={{ color: '#A68B6A' }}>分享</span></h1>
       </section>
 
-      <section style={{ padding: '60px 20px' }}>
+      <section style={{ padding: '24px 12px' }}>
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
           {articles.map(article => (
-            <div key={article.id} style={{ background: '#fff', borderRadius: '12px', padding: '25px', marginBottom: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
-              <span style={{ fontSize: '12px', color: '#A68B6A', fontWeight: 600 }}>{article.category}</span>
-              <h2 style={{ fontSize: '20px', margin: '10px 0' }}>{article.title}</h2>
-              <p style={{ color: '#666', marginBottom: '15px' }}>{article.excerpt}</p>
-              <span style={{ fontSize: '12px', color: '#999' }}>{article.date}</span>
+            <div key={article.id} style={{ background: '#fff', borderRadius: '12px', padding: '16px', marginBottom: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+              <span style={{ fontSize: '11px', color: '#A68B6A', fontWeight: 600 }}>{article.category}</span>
+              <h2 style={{ fontSize: '17px', margin: '8px 0' }}>{article.title}</h2>
+              <p style={{ color: '#666', marginBottom: '10px', fontSize: '14px' }}>{article.excerpt}</p>
+              <span style={{ fontSize: '11px', color: '#999' }}>{article.date}</span>
             </div>
           ))}
         </div>
