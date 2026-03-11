@@ -95,14 +95,7 @@ export default function Booking() {
 
     if (error) {
       console.error('Error saving booking:', error)
-      alert('預約失敗: ' + error.message)
-      // Fallback to localStorage
-      const bookings = JSON.parse(localStorage.getItem('viva_bookings') || '[]')
-      bookings.push(booking)
-      localStorage.setItem('viva_bookings', JSON.stringify(bookings))
-      alert('已暫存到本地 (Supabase連接有問題)')
-      setBookingRef(booking.ref)
-      setShowModal(true)
+      alert('預約失敗，請聯絡本店: ' + error.message)
       return
     }
 
