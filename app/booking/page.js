@@ -4,20 +4,9 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { supabase } from '../../lib/supabase'
 
-const services = [
-  { id: 1, name: '剪髮', price: 280, time: '60分', img: '✂️' },
-  { id: 2, name: '染髮', price: 680, time: '120分', img: '🎨' },
-  { id: 3, name: '燙髮', price: 880, time: '150分', img: '💇' },
-  { id: 4, name: '護髮', price: 380, time: '60分', img: '💆' },
-  { id: 5, name: '头皮护理', price: 450, time: '45分', img: '🧴' },
-]
-
-const coupons = [
-  { id: 1, name: '新客8折', discount: 20, code: 'NEW20', desc: '首次預約8折' },
-  { id: 2, name: '節省$100', discount: 100, code: 'SAVE100', desc: '滿$500減$100' },
-]
-
 export default function Booking() {
+  const [services, setServices] = useState([])
+  const [coupons, setCoupons] = useState([])
   const [selectedService, setSelectedService] = useState(null)
   const [selectedDate, setSelectedDate] = useState(null)
   const [selectedTime, setSelectedTime] = useState(null)
@@ -28,15 +17,76 @@ export default function Booking() {
   const [bookingRef, setBookingRef] = useState('')
   const [staffList, setStaffList] = useState([])
   const [selectedStaff, setSelectedStaff] = useState('')
+  const [loading, setLoading] = useState(true)
 
-  // Fetch staff from Supabase
+  // Fetch services, coupons and staff from Supabase
   useEffect(() => {
-    async function fetchStaff() {
-      const { data } = await supabase.from('staff').select('*').eq('enabled', true).order('name')
-      if (data) setStaffList(data)
+    async function fetchData() {
+      setLoading(true)
+      const [servicesData, couponsData, staffData] = await Promise.all([
+        supabase.from('services').select('*').eq('enabled', true).order('sort_order'),
+        supabase.from('coupons').select('*').eq('enabled', true),
+        supabase.from('staff').select('*').eq('enabled', true).order('name')
+      ])
+      
+      if (servicesData.data) {
+        // Map to expected format
+        const mappedServices = servicesData.data.map(s => ({
+          id: s.id,
+          name: s.name,
+          price: s.price,
+          time: s.time ? `${s.time}分` : '60分',
+          img: getServiceEmoji(s.name)
+        }))
+        setServices(mappedServices)
+      }
+      
+      if (couponsData.data) {
+        const mappedCoupons = couponsData.data.map(c => ({
+          id: c.id,
+          code: c.code,
+          name: c.name,
+          discount: c.discount,
+          desc: c.type === 'percent' ? `${c.discount}折` : `減$${c.discount}`
+        }))
+        setCoupons(mappedCoupons)
+      }
+      
+      if (staffData.data) setStaffList(staffData.data)
+      setLoading(false)
     }
-    fetchStaff()
+    fetchData()
   }, [])
+
+  const getServiceEmoji = (name) => {
+    if (name.includes('剪')) return '✂️'
+    if (name.includes('染')) return '🎨'
+    if (name.includes('燙')) return '💇'
+    if (name.includes('護')) return '💆'
+    if (name.includes('头皮')) return '🧴'
+    return '✂️'
+  }
+
+  // Format date key for schedule lookup
+  const formatDateKey = (day, year, month) => {
+    return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  }
+
+  // Check if staff is working on selected date
+  const isStaffWorking = (staff, date, time) => {
+    if (!staff || !staff.schedule) return true
+    
+    const dateKey = formatDateKey(date, currentYear, currentMonth)
+    const daySchedule = staff.schedule[dateKey]
+    
+    if (staff.daysOff?.includes(dateKey)) return false
+    if (!daySchedule?.start || !daySchedule?.end) return false
+    if (time && (time < daySchedule.start || time > daySchedule.end)) return false
+    
+    return true
+  }
+
+  const availableStaff = staffList.filter(s => isStaffWorking(s, selectedDate, selectedTime))
 
   const timeSlots = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00']
 
@@ -81,10 +131,8 @@ export default function Booking() {
       return
     }
 
-    // 生成預約編號
     const ref = 'VIVA' + Date.now().toString().slice(-6)
     
-    // 建立預約資料
     const booking = {
       ref,
       service: selectedService.name,
@@ -101,16 +149,10 @@ export default function Booking() {
       created_at: new Date().toISOString()
     }
 
-    // 儲存到 Supabase
-    console.log('Submitting booking:', booking)
-    
     const { data, error } = await supabase
       .from('bookings')
       .insert([booking])
       .select()
-
-    console.log('Insert data:', data)
-    console.log('Insert error:', error)
 
     if (error) {
       alert('錯誤: ' + JSON.stringify(error))
@@ -124,11 +166,19 @@ export default function Booking() {
 
   const finalPrice = selectedService ? 
     (formData.coupon ? 
-      (coupons.find(c => c.code === formData.coupon)?.discount === 100 ? 
-        selectedService.price - 100 : 
-        selectedService.price * 0.8)
+      (coupons.find(c => c.code === formData.coupon)?.discount >= 100 ? 
+        selectedService.price - (coupons.find(c => c.code === formData.coupon)?.discount || 0) : 
+        selectedService.price * (1 - (coupons.find(c => c.code === formData.coupon)?.discount || 0) / 100))
       : selectedService.price) 
     : 0
+
+  if (loading) {
+    return (
+      <div style={{ padding: '40px', textAlign: 'center' }}>
+        <p>載入中...</p>
+      </div>
+    )
+  }
 
   return (
     <>
@@ -140,7 +190,7 @@ export default function Booking() {
 
       <section style={{ padding: '24px 12px' }}>
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          {/* Steps - Mobile Friendly */}
+          {/* Steps */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
             <div style={{ padding: '8px 12px', borderRadius: '8px', background: selectedService ? '#A68B6A' : '#e5e7eb', color: selectedService ? '#fff' : '#999', fontSize: '12px', minWidth: '80px', textAlign: 'center' }}>
               選擇服務
@@ -153,43 +203,47 @@ export default function Booking() {
             </div>
           </div>
 
-          {/* Service Selection - Mobile Optimized */}
+          {/* Service Selection */}
           <div style={{ background: '#fff', padding: '16px', borderRadius: '16px', marginBottom: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
             <h3 style={{ marginBottom: '12px', fontSize: '16px' }}>選擇服務</h3>
-            <div style={{ display: 'grid', gap: '10px' }}>
-              {services.map(service => (
-                <div 
-                  key={service.id}
-                  onClick={() => setSelectedService(service)}
-                  style={{ 
-                    padding: '14px', 
-                    border: '2px solid ' + (selectedService?.id === service.id ? '#A68B6A' : '#e5e7eb'),
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    background: selectedService?.id === service.id ? '#FAF8F5' : 'transparent',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    minHeight: '60px'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ fontSize: '24px' }}>{service.img}</span>
-                    <div>
-                      <span style={{ fontWeight: 600, fontSize: '15px' }}>{service.name}</span>
-                      <span style={{ color: '#666', marginLeft: '8px', fontSize: '13px' }}>{service.time}</span>
+            {services.length === 0 ? (
+              <p style={{ textAlign: 'center', color: '#999', padding: '20px' }}>暫時沒有服務</p>
+            ) : (
+              <div style={{ display: 'grid', gap: '10px' }}>
+                {services.map(service => (
+                  <div 
+                    key={service.id}
+                    onClick={() => setSelectedService(service)}
+                    style={{ 
+                      padding: '14px', 
+                      border: '2px solid ' + (selectedService?.id === service.id ? '#A68B6A' : '#e5e7eb'),
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      background: selectedService?.id === service.id ? '#FAF8F5' : 'transparent',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      minHeight: '60px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ fontSize: '24px' }}>{service.img}</span>
+                      <div>
+                        <span style={{ fontWeight: 600, fontSize: '15px' }}>{service.name}</span>
+                        <span style={{ color: '#666', marginLeft: '8px', fontSize: '13px' }}>{service.time}</span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '18px', fontWeight: 700, color: '#A68B6A' }}>${service.price}</span>
+                      {selectedService?.id === service.id && <span style={{ color: '#A68B6A', fontSize: '18px' }}>✓</span>}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '18px', fontWeight: 700, color: '#A68B6A' }}>${service.price}</span>
-                    {selectedService?.id === service.id && <span style={{ color: '#A68B6A', fontSize: '18px' }}>✓</span>}
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Calendar - Mobile Optimized */}
+          {/* Calendar */}
           <div style={{ background: '#fff', padding: '16px', borderRadius: '16px', marginBottom: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <button onClick={() => { setCurrentMonth(m => m === 0 ? 11 : m - 1); if (currentMonth === 0) setCurrentYear(y => y - 1) }} style={{ padding: '10px 14px', background: '#fff', border: '2px solid #A68B6A', color: '#A68B6A', borderRadius: '8px', cursor: 'pointer', fontSize: '14px' }}>◀</button>
@@ -204,7 +258,7 @@ export default function Booking() {
             </div>
           </div>
 
-          {/* Time Slots - Mobile Optimized */}
+          {/* Time Slots */}
           <div style={{ marginTop: '16px' }}>
             <h4 style={{ marginBottom: '10px', fontSize: '15px' }}>選擇時間</h4>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
@@ -235,48 +289,54 @@ export default function Booking() {
           </div>
 
           {/* Staff Selection */}
-          {staffList.length > 0 && (
+          {selectedDate && (
             <div style={{ marginTop: '16px' }}>
               <h4 style={{ marginBottom: '10px', fontSize: '15px' }}>選擇髮型師</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
-                <div
-                  onClick={() => setSelectedStaff('')}
-                  style={{
-                    padding: '14px',
-                    background: selectedStaff === '' ? '#A68B6A' : '#fff',
-                    color: selectedStaff === '' ? '#fff' : '#333',
-                    border: '1px solid ' + (selectedStaff === '' ? '#A68B6A' : '#e5e7eb'),
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    textAlign: 'center',
-                    fontSize: '14px'
-                  }}
-                >
-                  隨機安排
+              {availableStaff.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: '#666', background: '#f5f5f5', borderRadius: '8px' }}>
+                  該日期沒有髮型師當值，請選擇其他日期
                 </div>
-                {staffList.map(s => (
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
                   <div
-                    key={s.id}
-                    onClick={() => setSelectedStaff(s.id.toString())}
+                    onClick={() => setSelectedStaff('')}
                     style={{
                       padding: '14px',
-                      background: selectedStaff === s.id.toString() ? '#A68B6A' : '#fff',
-                      color: selectedStaff === s.id.toString() ? '#fff' : '#333',
-                      border: '1px solid ' + (selectedStaff === s.id.toString() ? '#A68B6A' : '#e5e7eb'),
+                      background: selectedStaff === '' ? '#A68B6A' : '#fff',
+                      color: selectedStaff === '' ? '#fff' : '#333',
+                      border: '1px solid ' + (selectedStaff === '' ? '#A68B6A' : '#e5e7eb'),
                       borderRadius: '8px',
                       cursor: 'pointer',
                       textAlign: 'center',
                       fontSize: '14px'
                     }}
                   >
-                    {s.name}
+                    隨機安排
                   </div>
-                ))}
-              </div>
+                  {availableStaff.map(s => (
+                    <div
+                      key={s.id}
+                      onClick={() => setSelectedStaff(s.id.toString())}
+                      style={{
+                        padding: '14px',
+                        background: selectedStaff === s.id.toString() ? '#A68B6A' : '#fff',
+                        color: selectedStaff === s.id.toString() ? '#fff' : '#333',
+                        border: '1px solid ' + (selectedStaff === s.id.toString() ? '#A68B6A' : '#e5e7eb'),
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                        fontSize: '14px'
+                      }}
+                    >
+                      {s.name}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
-          {/* Form - Mobile Optimized */}
+          {/* Form */}
           <div style={{ background: '#fff', padding: '16px', borderRadius: '16px', marginTop: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
             <h3 style={{ marginBottom: '12px', fontSize: '16px' }}>客戶資料</h3>
             <div style={{ marginBottom: '12px' }}>
@@ -297,13 +357,13 @@ export default function Booking() {
               </select>
             </div>
             <button onClick={handleSubmit} style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #A68B6A, #8B7355)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '16px', cursor: 'pointer', minHeight: '52px' }}>
-              提交預約 {finalPrice > 0 && "$" + finalPrice}
+              提交預約 {finalPrice > 0 && "$" + Math.round(finalPrice)}
             </button>
           </div>
         </div>
       </section>
 
-      {/* Success Modal - Mobile Optimized */}
+      {/* Success Modal */}
       {showModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 300, padding: '16px' }}>
           <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', maxWidth: '400px', width: '100%', textAlign: 'center', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -314,7 +374,7 @@ export default function Booking() {
               <p><strong>服務：</strong>{selectedService?.name}</p>
               <p><strong>日期：</strong>{selectedDate}/{currentMonth + 1}/{currentYear}</p>
               <p><strong>時間：</strong>{selectedTime}</p>
-              <p><strong>金額：</strong>${finalPrice}</p>
+              <p><strong>金額：</strong>${Math.round(finalPrice)}</p>
             </div>
             <p style={{ fontSize: '14px', color: '#666', marginBottom: '20px' }}>
               我們會盡快確認您的預約，並發送確認訊息到您的電話。
