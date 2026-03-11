@@ -14,22 +14,31 @@ export default function Admin() {
   const ADMIN_PASSWORD = 'viva2026'
 
   const [bookings, setBookings] = useState([])
+  const [orders, setOrders] = useState([])
   const [services, setServices] = useState([])
+  const [products, setProducts] = useState([])
+  const [tickets, setTickets] = useState([])
   const [staff, setStaff] = useState([])
   const [coupons, setCoupons] = useState([])
   const [users, setUsers] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [searchTermOrder, setSearchTermOrder] = useState('')
+  const [searchTermProduct, setSearchTermProduct] = useState('')
+  const [searchTermTicket, setSearchTermTicket] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
-  const [calendarMonth, setCalendarMonth] = useState(new Date())
-  const [selectedStaff, setSelectedStaff] = useState(null)
+  const [orderStatusFilter, setOrderStatusFilter] = useState('all')
+  const [selectedStaffId, setSelectedStaffId] = useState(null)
 
   const tabs = [
     { id: 'dashboard', name: '📊' },
     { id: 'analytics', name: '📈' },
     { id: 'bookings', name: '📅' },
+    { id: 'orders', name: '🛒' },
+    { id: 'products', name: '💄' },
+    { id: 'tickets', name: '🎫' },
     { id: 'staff', name: '💇' },
     { id: 'services', name: '✂️' },
-    { id: 'coupons', name: '🎫' },
+    { id: 'coupons', name: '🏷️' },
     { id: 'customers', name: '👥' },
   ]
 
@@ -39,20 +48,33 @@ export default function Admin() {
     else setLoading(false)
   }, [])
 
+  useEffect(() => {
+    if (staff.length > 0 && !selectedStaffId) {
+      setSelectedStaffId(staff[0].id)
+    }
+  }, [staff])
+
   const fetchData = async () => {
     setLoading(true)
-    const [b, s, c, u, st] = await Promise.all([
+    const [b, o, s, p, t, c, u, st] = await Promise.all([
       supabase.from('bookings').select('*').order('created_at', { ascending: false }),
+      supabase.from('orders').select('*').order('created_at', { ascending: false }),
       supabase.from('services').select('*'),
+      supabase.from('products').select('*'),
+      supabase.from('tickets').select('*'),
       supabase.from('coupons').select('*'),
       supabase.from('users').select('*').order('created_at', { ascending: false }),
       supabase.from('staff').select('*').order('id'),
     ])
     if (b.data) setBookings(b.data)
+    if (o.data) setOrders(o.data)
     if (s.data) setServices(s.data)
+    if (p.data) setProducts(p.data.length > 0 ? p.data : [{ id: 1, name: 'DS100護髮精華素', category: '護理', price: 680, orig: 880, description: '深層修復受損髮質', emoji: '💆', enabled: true }])
+    if (t.data) setTickets(t.data.length > 0 ? t.data : [{ id: 1, name: 'Basic套票', price: 680, orig: 860, times: 2, features: '任何服務適用', emoji: '🎁', enabled: true }])
+    if (c.data) setCoupons(c.data)
     if (c.data) setCoupons(c.data)
     if (u.data) setUsers(u.data)
-    if (st.data) setStaff(st.data.length > 0 ? st.data : [{ id: 1, name: '髮型師A', role: '髮型師', phone: '', enabled: true, schedule: {}, services: [] }])
+    if (st.data) setStaff(st.data.length > 0 ? st.data : [{ id: 1, name: '髮型師A', role: '髮型師', phone: '', enabled: true, schedule: {}, services: [], daysOff: [] }])
     setLoading(false)
   }
 
@@ -60,6 +82,9 @@ export default function Admin() {
   const handleLogout = () => { localStorage.removeItem('viva_admin_auth'); setIsAuthenticated(false); router.push('/') }
   const updateStatus = async (id, status) => { await supabase.from('bookings').update({ status }).eq('id', id); setBookings(bookings.map(b => b.id === id ? { ...b, status } : b)) }
   const deleteBooking = async (id) => { if (confirm('確定刪除？')) { await supabase.from('bookings').delete().eq('id', id); setBookings(bookings.filter(b => b.id !== id)) } }
+  
+  const updateOrderStatus = async (id, status) => { await supabase.from('orders').update({ status }).eq('id', id); setOrders(orders.map(o => o.id === id ? { ...o, status } : o)) }
+  const deleteOrder = async (id) => { if (confirm('確定刪除？')) { await supabase.from('orders').delete().eq('id', id); setOrders(orders.filter(o => o.id !== id)) } }
 
   const saveStaff = async () => {
     setSaving(true)
@@ -70,7 +95,9 @@ export default function Admin() {
 
   const addStaff = () => {
     const newId = Math.max(...staff.map(s => s.id), 0) + 1
-    setStaff([...staff, { id: newId, name: '新員工', role: '髮型師', phone: '', enabled: true, schedule: {}, services: [], daysOff: [] }])
+    const newStaff = { id: newId, name: '新員工', role: '髮型師', phone: '', enabled: true, schedule: {}, services: [], daysOff: [] }
+    setStaff([...staff, newStaff])
+    setSelectedStaffId(newId)
   }
 
   const deleteStaff = async (id) => {
@@ -78,6 +105,9 @@ export default function Admin() {
     setSaving(true)
     await supabase.from('staff').delete().eq('id', id)
     setStaff(staff.filter(s => s.id !== id))
+    if (selectedStaffId === id) {
+      setSelectedStaffId(staff.length > 1 ? staff.find(s => s.id !== id)?.id : null)
+    }
     setSaving(false)
   }
 
@@ -88,65 +118,20 @@ export default function Admin() {
   const toggleStaffService = (staffId, serviceId) => {
     setStaff(staff.map(s => {
       if (s.id === staffId) {
-        const services = s.services || []
-        const hasService = services.includes(serviceId)
-        return { ...s, services: hasService ? services.filter(id => id !== serviceId) : [...services, serviceId] }
+        const svcs = s.services || []
+        const hasService = svcs.includes(serviceId)
+        return { ...s, services: hasService ? svcs.filter(id => id !== serviceId) : [...svcs, serviceId] }
       }
       return s
     }))
   }
 
-  // Calendar helpers
-  const getCalendarDays = () => {
-    const year = calendarMonth.getFullYear()
-    const month = calendarMonth.getMonth()
-    const firstDay = new Date(year, month, 1)
-    const lastDay = new Date(year, month + 1, 0)
-    const days = []
-    // Add empty slots for days before first day of month
-    for (let i = 0; i < firstDay.getDay(); i++) {
-      days.push(null)
-    }
-    // Add all days of month
-    for (let i = 1; i <= lastDay.getDate(); i++) {
-      days.push(new Date(year, month, i))
-    }
-    return days
-  }
-
-  const formatDateKey = (date) => {
-    if (!date) return null
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-  }
-
-  const getMonthName = () => {
-    return calendarMonth.toLocaleDateString('zh-HK', { year: 'numeric', month: 'long' })
-  }
-
-  const prevMonth = () => {
-    setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))
-  }
-
-  const nextMonth = () => {
-    setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))
-  }
-
-  const updateDailySchedule = (staffId, dateKey, field, value) => {
-    setStaff(staff.map(s => {
-      if (s.id === staffId) {
-        const schedule = s.schedule || {}
-        return { ...s, schedule: { ...schedule, [dateKey]: { ...schedule[dateKey], [field]: value } } }
-      }
-      return s
-    }))
-  }
-
-  const toggleDailyOff = (staffId, dateKey) => {
+  const toggleDailyOff = (staffId, dayKey) => {
     setStaff(staff.map(s => {
       if (s.id === staffId) {
         const daysOff = s.daysOff || []
-        const has = daysOff.includes(dateKey)
-        return { ...s, daysOff: has ? daysOff.filter(d => d !== dateKey) : [...daysOff, dateKey] }
+        const has = daysOff.includes(dayKey)
+        return { ...s, daysOff: has ? daysOff.filter(d => d !== dayKey) : [...daysOff, dayKey] }
       }
       return s
     }))
@@ -174,6 +159,30 @@ export default function Admin() {
     setServices([...services, { id: newId, name: '新服務', price: 0, time: 60, emoji: '✂️', category: '', description: '', enabled: true }])
   }
 
+  const saveProducts = async () => {
+    setSaving(true)
+    for (const p of products) await supabase.from('products').upsert(p)
+    alert('已保存')
+    setSaving(false)
+  }
+
+  const addProduct = () => {
+    const newId = Math.max(...products.map(p => p.id), 0) + 1
+    setProducts([...products, { id: newId, name: '新產品', category: '護理', price: 0, orig: 0, description: '', emoji: '💄', enabled: true }])
+  }
+
+  const saveTickets = async () => {
+    setSaving(true)
+    for (const t of tickets) await supabase.from('tickets').upsert(t)
+    alert('已保存')
+    setSaving(false)
+  }
+
+  const addTicket = () => {
+    const newId = Math.max(...tickets.map(t => t.id), 0) + 1
+    setTickets([...tickets, { id: newId, name: '新套票', price: 0, orig: 0, times: 2, features: '', emoji: '🎁', enabled: true }])
+  }
+
   const saveCoupons = async () => {
     setSaving(true)
     for (const c of coupons) await supabase.from('coupons').upsert(c)
@@ -187,18 +196,65 @@ export default function Admin() {
   }
 
   const filteredBookings = bookings.filter(b => (!searchTerm || b.name?.includes(searchTerm) || b.phone?.includes(searchTerm)) && (statusFilter === 'all' || b.status === statusFilter))
+  const filteredOrders = orders.filter(o => (!searchTermOrder || o.name?.includes(searchTermOrder) || o.phone?.includes(searchTermOrder) || o.id?.toString().includes(searchTermOrder)) && (orderStatusFilter === 'all' || o.status === orderStatusFilter))
+  const filteredProducts = products.filter(p => !searchTermProduct || p.name?.includes(searchTermProduct))
+  const filteredTickets = tickets.filter(t => !searchTermTicket || t.name?.includes(searchTermTicket))
 
   const today = new Date().toLocaleDateString('zh-HK')
+  const todayObj = new Date()
+  const thisMonth = todayObj.getMonth()
+  const thisYear = todayObj.getFullYear()
+  
   const stats = {
     todayBookings: bookings.filter(b => b.date === today).length,
     todayRevenue: bookings.filter(b => b.date === today).reduce((sum, b) => sum + (b.final_price || 0), 0),
     totalUsers: users.length,
     pending: bookings.filter(b => b.status === 'pending').length,
+    // More stats
+    monthBookings: bookings.filter(b => {
+      const [d, m, y] = b.date?.split('/') || []
+      return parseInt(y) === thisYear && parseInt(m) === thisMonth + 1
+    }).length,
+    monthRevenue: bookings.filter(b => {
+      const [d, m, y] = b.date?.split('/') || []
+      return parseInt(y) === thisYear && parseInt(m) === thisMonth + 1
+    }).reduce((sum, b) => sum + (b.final_price || 0), 0),
+    completedBookings: bookings.filter(b => b.status === 'completed').length,
+    confirmedBookings: bookings.filter(b => b.status === 'confirmed').length,
+    totalRevenue: bookings.reduce((sum, b) => sum + (b.final_price || 0), 0),
+    avgBookingValue: bookings.length > 0 ? Math.round(bookings.reduce((sum, b) => sum + (b.final_price || 0), 0) / bookings.length) : 0,
   }
 
-  const staffStats = staff.map(s => ({ ...s, bookings: bookings.filter(b => b.staff_id === s.id).length, revenue: bookings.filter(b => b.staff_id === s.id).reduce((sum, b) => sum + (b.final_price || 0), 0) }))
-  const days = ['0', '1', '2', '3', '4', '5', '6']
-  const dayNames = ['日', '一', '二', '三', '四', '五', '六']
+  // Service breakdown
+  const serviceStats = services.map(sv => ({
+    ...sv,
+    count: bookings.filter(b => b.service === sv.name).length,
+    revenue: bookings.filter(b => b.service === sv.name).reduce((sum, b) => sum + (b.final_price || 0), 0)
+  })).sort((a, b) => b.count - a.count)
+
+  // Customer stats
+  const customerStats = {
+    newCustomers: users.filter(u => {
+      const userBookings = bookings.filter(b => b.phone === u.phone)
+      return userBookings.length === 1
+    }).length,
+    returningCustomers: users.filter(u => {
+      const userBookings = bookings.filter(b => b.phone === u.phone)
+      return userBookings.length > 1
+    }).length,
+    topCustomers: bookings.reduce((acc, b) => {
+      acc[b.phone] = (acc[b.phone] || 0) + 1
+      return acc
+    }, {})
+  }
+
+  const staffStats = staff.map(s => ({ 
+    ...s, 
+    bookings: bookings.filter(b => b.staff_id === s.id).length, 
+    revenue: bookings.filter(b => b.staff_id === s.id).reduce((sum, b) => sum + (b.final_price || 0), 0),
+    completed: bookings.filter(b => b.staff_id === s.id && b.status === 'completed').length
+  }))
+  const selectedStaff = staff.find(s => s.id === selectedStaffId)
 
   if (!isAuthenticated) return (
     <div style={{ padding: '40px 20px', textAlign: 'center' }}>
@@ -224,111 +280,231 @@ export default function Admin() {
 
         {activeTab === 'analytics' && <div>
           <h3 style={{ marginBottom: '12px' }}>📈 數據分析</h3>
-          <div style={{ background: '#fff', padding: '16px', borderRadius: '10px', marginBottom: '10px' }}>
-            <h4 style={{ marginBottom: '10px', fontSize: '14px' }}>髮型師表現</h4>
-            {staffStats.map(s => (
-              <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', borderBottom: '1px solid #eee', fontSize: '13px' }}>
-                <span>{s.name} ({s.role})</span>
-                <span>{s.bookings} 預約 / ${s.revenue}</span>
+          
+          {/* Overview Stats */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '16px' }}>
+            <div style={{ background: '#fff', padding: '16px', borderRadius: '10px', textAlign: 'center' }}>
+              <div style={{ fontSize: '24px', fontWeight: 700 }}>{stats.todayBookings}</div>
+              <div style={{ fontSize: '11px', color: '#666' }}>今日預約</div>
+            </div>
+            <div style={{ background: '#fff', padding: '16px', borderRadius: '10px', textAlign: 'center' }}>
+              <div style={{ fontSize: '24px', fontWeight: 700, color: '#22c55e' }}>${stats.todayRevenue}</div>
+              <div style={{ fontSize: '11px', color: '#666' }}>今日收入</div>
+            </div>
+            <div style={{ background: '#fff', padding: '16px', borderRadius: '10px', textAlign: 'center' }}>
+              <div style={{ fontSize: '24px', fontWeight: 700 }}>{stats.monthBookings}</div>
+              <div style={{ fontSize: '11px', color: '#666' }}>本月預約</div>
+            </div>
+            <div style={{ background: '#fff', padding: '16px', borderRadius: '10px', textAlign: 'center' }}>
+              <div style={{ fontSize: '24px', fontWeight: 700, color: '#22c55e' }}>${stats.monthRevenue}</div>
+              <div style={{ fontSize: '11px', color: '#666' }}>本月收入</div>
+            </div>
+          </div>
+
+          {/* Overall Stats */}
+          <div style={{ background: '#fff', padding: '16px', borderRadius: '10px', marginBottom: '12px' }}>
+            <h4 style={{ marginBottom: '12px', fontSize: '14px', fontWeight: 600 }}>📊 總覽</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+              <div><div style={{ fontSize: '20px', fontWeight: 700 }}>{bookings.length}</div><div style={{ fontSize: '11px', color: '#666' }}>總預約</div></div>
+              <div><div style={{ fontSize: '20px', fontWeight: 700, color: '#22c55e' }}>${stats.totalRevenue}</div><div style={{ fontSize: '11px', color: '#666' }}>總收入</div></div>
+              <div><div style={{ fontSize: '20px', fontWeight: 700 }}>${stats.avgBookingValue}</div><div style={{ fontSize: '11px', color: '#666' }}>平均消費</div></div>
+              <div><div style={{ fontSize: '20px', fontWeight: 700 }}>{stats.totalUsers}</div><div style={{ fontSize: '11px', color: '#666' }}>會員數</div></div>
+            </div>
+          </div>
+
+          {/* Booking Status */}
+          <div style={{ background: '#fff', padding: '16px', borderRadius: '10px', marginBottom: '12px' }}>
+            <h4 style={{ marginBottom: '12px', fontSize: '14px', fontWeight: 600 }}>📋 預約狀態</h4>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <div style={{ flex: '1 1 45%', padding: '12px', background: '#fef3c7', borderRadius: '8px', textAlign: 'center' }}>
+                <div style={{ fontSize: '20px', fontWeight: 700 }}>{stats.pending}</div>
+                <div style={{ fontSize: '11px', color: '#666' }}>待確認</div>
+              </div>
+              <div style={{ flex: '1 1 45%', padding: '12px', background: '#dbeafe', borderRadius: '8px', textAlign: 'center' }}>
+                <div style={{ fontSize: '20px', fontWeight: 700, color: '#2563eb' }}>{stats.confirmedBookings}</div>
+                <div style={{ fontSize: '11px', color: '#666' }}>已確認</div>
+              </div>
+              <div style={{ flex: '1 1 45%', padding: '12px', background: '#dcfce7', borderRadius: '8px', textAlign: 'center' }}>
+                <div style={{ fontSize: '20px', fontWeight: 700, color: '#16a34a' }}>{stats.completedBookings}</div>
+                <div style={{ fontSize: '11px', color: '#666' }}>已完成</div>
+              </div>
+              <div style={{ flex: '1 1 45%', padding: '12px', background: '#f3f4f6', borderRadius: '8px', textAlign: 'center' }}>
+                <div style={{ fontSize: '20px', fontWeight: 700, color: '#6b7280' }}>{bookings.length - stats.completedBookings - stats.confirmedBookings - stats.pending}</div>
+                <div style={{ fontSize: '11px', color: '#666' }}>已取消</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Service Performance */}
+          <div style={{ background: '#fff', padding: '16px', borderRadius: '10px', marginBottom: '12px' }}>
+            <h4 style={{ marginBottom: '12px', fontSize: '14px', fontWeight: 600 }}>✂️ 服務排行</h4>
+            {serviceStats.slice(0, 5).map((sv, i) => (
+              <div key={sv.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', borderBottom: '1px solid #eee', fontSize: '13px' }}>
+                <span><span style={{ marginRight: '8px', color: '#A68B6A' }}>{i + 1}.</span>{sv.name}</span>
+                <span style={{ color: '#666' }}>{sv.count} 次 / ${sv.revenue}</span>
               </div>
             ))}
           </div>
+
+          {/* Staff Performance */}
+          <div style={{ background: '#fff', padding: '16px', borderRadius: '10px', marginBottom: '12px' }}>
+            <h4 style={{ marginBottom: '12px', fontSize: '14px', fontWeight: 600 }}>💇 髮型師表現</h4>
+            {staffStats.length === 0 ? (
+              <div style={{ padding: '20px', textAlign: 'center', color: '#999', fontSize: '13px' }}>暫無數據</div>
+            ) : (
+              staffStats.map(s => (
+                <div key={s.id} style={{ padding: '10px', borderBottom: '1px solid #eee' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
+                    <span style={{ fontWeight: 600 }}>{s.name} ({s.role})</span>
+                    <span style={{ color: '#22c55e', fontWeight: 600 }}>${s.revenue}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '16px', fontSize: '11px', color: '#666' }}>
+                    <span>📅 {s.bookings} 預約</span>
+                    <span>✅ {s.completed} 完成</span>
+                    <span>💰 平均 ${s.bookings > 0 ? Math.round(s.revenue / s.bookings) : 0}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Customer Stats */}
           <div style={{ background: '#fff', padding: '16px', borderRadius: '10px' }}>
-            <h4 style={{ marginBottom: '10px', fontSize: '14px' }}>本月預約趨勢</h4>
-            <div style={{ fontSize: '12px', color: '#666' }}>總預約: {bookings.length}</div>
-            <div style={{ fontSize: '12px', color: '#666' }}>已完成: {bookings.filter(b => b.status === 'completed').length}</div>
-            <div style={{ fontSize: '12px', color: '#666' }}>已確認: {bookings.filter(b => b.status === 'confirmed').length}</div>
-            <div style={{ fontSize: '12px', color: '#666' }}>待確認: {bookings.filter(b => b.status === 'pending').length}</div>
+            <h4 style={{ marginBottom: '12px', fontSize: '14px', fontWeight: 600 }}>👥 客戶分析</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '12px' }}>
+              <div style={{ padding: '12px', background: '#dcfce7', borderRadius: '8px', textAlign: 'center' }}>
+                <div style={{ fontSize: '20px', fontWeight: 700, color: '#16a34a' }}>{customerStats.newCustomers}</div>
+                <div style={{ fontSize: '11px', color: '#666' }}>新客戶</div>
+              </div>
+              <div style={{ padding: '12px', background: '#fef3c7', borderRadius: '8px', textAlign: 'center' }}>
+                <div style={{ fontSize: '20px', fontWeight: 700, color: '#ca8a04' }}>{customerStats.returningCustomers}</div>
+                <div style={{ fontSize: '11px', color: '#666' }}>回頭客</div>
+              </div>
+            </div>
           </div>
         </div>}
 
         {activeTab === 'staff' && <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}><h3>💇 員工設定</h3><button onClick={addStaff} style={{ padding: '6px 12px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '6px' }}>+ 新增員工</button></div>
-          {staff.length === 0 && <div style={{ padding: '40px', textAlign: 'center', color: '#999', background: '#fff', borderRadius: '10px' }}>尚未有員工資料<br/><button onClick={addStaff} style={{ marginTop: '10px', padding: '8px 16px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '6px' }}>+ 新增員工</button></div>}
-          {staff.map(s => (
-            <div key={s.id} style={{ background: '#fff', borderRadius: '12px', marginBottom: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-              {/* Header - Basic Info */}
-              <div style={{ padding: '16px', borderBottom: '1px solid #f0f0f0' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: s.enabled ? '#A68B6A' : '#ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '20px', fontWeight: 700 }}>
-                    {s.name?.charAt(0) || '?'}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <input type="text" value={s.name} onChange={e => updateStaffField(s.id, 'name', e.target.value)} placeholder="姓名" style={{ fontSize: '16px', fontWeight: 600, padding: '6px 8px', border: '1px solid #eee', borderRadius: '6px', width: '100px' }} />
-                      <select value={s.role} onChange={e => updateStaffField(s.id, 'role', e.target.value)} style={{ padding: '6px 8px', border: '1px solid #eee', borderRadius: '6px', fontSize: '13px' }}>
-                        <option>髮型師</option>
-                        <option>助理</option>
-                        <option>經理</option>
-                      </select>
-                    </div>
-                    <input type="text" value={s.phone || ''} onChange={e => updateStaffField(s.id, 'phone', e.target.value)} placeholder="電話 (可留空)" style={{ marginTop: '6px', padding: '6px 8px', border: '1px solid #eee', borderRadius: '6px', fontSize: '13px', width: '140px' }} />
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', cursor: 'pointer' }}>
-                      <input type="checkbox" checked={s.enabled} onChange={e => updateStaffField(s.id, 'enabled', e.target.checked)} />
-                      啟用
-                    </label>
-                    <button onClick={() => deleteStaff(s.id)} style={{ padding: '6px 10px', background: '#fef2f2', color: '#ef4444', border: 'none', borderRadius: '6px', fontSize: '12px' }}>刪除</button>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Services */}
-              <div style={{ padding: '12px 16px', borderBottom: '1px solid #f0f0f0', background: '#fafafa' }}>
-                <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px', fontWeight: 500 }}>可提供服務</div>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  {services.map(sv => (
-                    <button key={sv.id} onClick={() => toggleStaffService(s.id, sv.id)} 
-                      style={{ padding: '6px 12px', background: s.services?.includes(sv.id) ? '#A68B6A' : '#fff', 
-                      color: s.services?.includes(sv.id) ? '#fff' : '#666', border: '1px solid #e5e5e5', 
-                      borderRadius: '20px', fontSize: '12px', cursor: 'pointer' }}>
-                      {sv.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              
-              {/* Weekly Schedule */}
-              <div style={{ padding: '12px 16px' }}>
-                <div style={{ fontSize: '12px', color: '#666', marginBottom: '10px', fontWeight: 500 }}>每週上班時間 (點擊切換)</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
-                  {['日', '一', '二', '三', '四', '五', '六'].map((day, idx) => {
-                    const dayKey = idx.toString()
-                    const daySchedule = s.schedule?.[dayKey]
-                    const isOff = s.daysOff?.includes(dayKey)
-                    return (
-                      <div key={idx} style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>{day}</div>
-                        {isOff ? (
-                          <div onClick={() => toggleDailyOff(s.id, dayKey)} style={{ padding: '8px 4px', background: '#ef4444', color: '#fff', borderRadius: '6px', fontSize: '11px', cursor: 'pointer' }}>放假</div>
-                        ) : daySchedule?.start ? (
-                          <div onClick={() => toggleDailyOff(s.id, dayKey)} style={{ padding: '8px 4px', background: '#22c55e', color: '#fff', borderRadius: '6px', fontSize: '10px', cursor: 'pointer' }}>
-                            {daySchedule.start}-{daySchedule.end}
-                          </div>
-                        ) : (
-                          <div onClick={() => updateStaffSchedule(s.id, dayKey, 'start', '09:00')} style={{ padding: '8px 4px', background: '#f5f5f5', color: '#999', borderRadius: '6px', fontSize: '11px', cursor: 'pointer' }}>休息</div>
-                        )}
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}><h3>💇 員工設定</h3><button onClick={addStaff} style={{ padding: '8px 16px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '6px' }}>+ 新增員工</button></div>
+          
+          {staff.length === 0 ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: '#999', background: '#fff', borderRadius: '10px' }}>尚未有員工資料<br/><button onClick={addStaff} style={{ marginTop: '10px', padding: '8px 16px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '6px' }}>+ 新增員工</button></div>
+          ) : (
+            <div style={{ display: 'flex', gap: '12px' }}>
+              {/* Left: Staff List */}
+              <div style={{ width: '200px', flexShrink: 0 }}>
+                <div style={{ background: '#fff', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+                  {staff.map(s => (
+                    <div key={s.id} onClick={() => setSelectedStaffId(s.id)} style={{ 
+                      padding: '14px 12px', 
+                      borderBottom: '1px solid #f0f0f0',
+                      cursor: 'pointer',
+                      background: selectedStaffId === s.id ? '#FAF8F5' : '#fff',
+                      borderLeft: selectedStaffId === s.id ? '4px solid #A68B6A' : '4px solid transparent'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: s.enabled ? '#A68B6A' : '#ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '16px', fontWeight: 600 }}>
+                          {s.name?.charAt(0) || '?'}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: 600 }}>{s.name}</div>
+                          <div style={{ fontSize: '11px', color: '#999' }}>{s.role}</div>
+                        </div>
                       </div>
-                    )
-                  })}
-                </div>
-                <div style={{ marginTop: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                  <span style={{ fontSize: '11px', color: '#999' }}>編輯時間：</span>
-                  {['0', '1', '2', '3', '4', '5', '6'].map(d => (
-                    <div key={d} style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                      <span style={{ fontSize: '10px', width: '12px' }}>{['日', '一', '二', '三', '四', '五', '六'][d]}</span>
-                      <input type="time" value={s.schedule?.[d]?.start || ''} onChange={e => updateStaffSchedule(s.id, d, 'start', e.target.value)} style={{ width: '70px', padding: '4px', fontSize: '10px', border: '1px solid #ddd', borderRadius: '4px' }} />
-                      <span style={{ fontSize: '10px' }}>-</span>
-                      <input type="time" value={s.schedule?.[d]?.end || ''} onChange={e => updateStaffSchedule(s.id, d, 'end', e.target.value)} style={{ width: '70px', padding: '4px', fontSize: '10px', border: '1px solid #ddd', borderRadius: '4px' }} />
                     </div>
                   ))}
                 </div>
+              </div>
+              
+              {/* Right: Staff Detail */}
+              <div style={{ flex: 1 }}>
+                {selectedStaff ? (
+                  <div style={{ background: '#fff', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+                    <div style={{ padding: '20px', borderBottom: '1px solid #f0f0f0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <div style={{ width: '70px', height: '70px', borderRadius: '50%', background: selectedStaff.enabled ? '#A68B6A' : '#ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '28px', fontWeight: 700 }}>
+                          {selectedStaff.name?.charAt(0) || '?'}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                            <input type="text" value={selectedStaff.name} onChange={e => updateStaffField(selectedStaff.id, 'name', e.target.value)} placeholder="姓名" style={{ fontSize: '18px', fontWeight: 600, padding: '8px 12px', border: '1px solid #eee', borderRadius: '8px', width: '120px' }} />
+                            <select value={selectedStaff.role} onChange={e => updateStaffField(selectedStaff.id, 'role', e.target.value)} style={{ padding: '8px 12px', border: '1px solid #eee', borderRadius: '8px', fontSize: '14px' }}>
+                              <option>髮型師</option>
+                              <option>助理</option>
+                              <option>經理</option>
+                            </select>
+                          </div>
+                          <input type="text" value={selectedStaff.phone || ''} onChange={e => updateStaffField(selectedStaff.id, 'phone', e.target.value)} placeholder="電話 (可留空)" style={{ padding: '8px 12px', border: '1px solid #eee', borderRadius: '8px', fontSize: '14px', width: '180px' }} />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', cursor: 'pointer' }}>
+                            <input type="checkbox" checked={selectedStaff.enabled} onChange={e => updateStaffField(selectedStaff.id, 'enabled', e.target.checked)} />
+                            啟用
+                          </label>
+                          <button onClick={() => { if(confirm('確定刪除此員工？')) { deleteStaff(selectedStaff.id) }}} style={{ padding: '8px 14px', background: '#fef2f2', color: '#ef4444', border: 'none', borderRadius: '6px', fontSize: '13px' }}>🗑️ 刪除</button>
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0', background: '#fafafa' }}>
+                      <div style={{ fontSize: '14px', color: '#666', marginBottom: '12px', fontWeight: 500 }}>可提供服務</div>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {services.map(sv => (
+                          <button key={sv.id} onClick={() => toggleStaffService(selectedStaff.id, sv.id)} 
+                            style={{ padding: '8px 16px', background: selectedStaff.services?.includes(sv.id) ? '#A68B6A' : '#fff', 
+                            color: selectedStaff.services?.includes(sv.id) ? '#fff' : '#666', border: '1px solid #e5e5e5', 
+                            borderRadius: '20px', fontSize: '13px', cursor: 'pointer' }}>
+                            {sv.emoji} {sv.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ padding: '20px' }}>
+                      <div style={{ fontSize: '14px', color: '#666', marginBottom: '16px', fontWeight: 500 }}>每週上班時間</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '10px', marginBottom: '20px' }}>
+                        {['日', '一', '二', '三', '四', '五', '六'].map((day, idx) => {
+                          const dayKey = idx.toString()
+                          const daySchedule = selectedStaff.schedule?.[dayKey]
+                          const isOff = selectedStaff.daysOff?.includes(dayKey)
+                          return (
+                            <div key={idx} style={{ textAlign: 'center' }}>
+                              <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px', fontWeight: 500 }}>{day}</div>
+                              {isOff ? (
+                                <div onClick={() => toggleDailyOff(selectedStaff.id, dayKey)} style={{ padding: '12px 4px', background: '#ef4444', color: '#fff', borderRadius: '8px', fontSize: '12px', cursor: 'pointer' }}>放假</div>
+                              ) : daySchedule?.start ? (
+                                <div onClick={() => toggleDailyOff(selectedStaff.id, dayKey)} style={{ padding: '12px 4px', background: '#22c55e', color: '#fff', borderRadius: '8px', fontSize: '11px', cursor: 'pointer' }}>
+                                  {daySchedule.start}-{daySchedule.end}
+                                </div>
+                              ) : (
+                                <div onClick={() => updateStaffSchedule(selectedStaff.id, dayKey, 'start', '09:00')} style={{ padding: '12px 4px', background: '#f5f5f5', color: '#999', borderRadius: '8px', fontSize: '12px', cursor: 'pointer' }}>休息</div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <div style={{ background: '#f5f5f5', padding: '16px', borderRadius: '8px' }}>
+                        <div style={{ fontSize: '13px', color: '#666', marginBottom: '10px' }}>編輯時間：</div>
+                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                          {['0', '1', '2', '3', '4', '5', '6'].map(d => (
+                            <div key={d} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <span style={{ fontSize: '12px', width: '16px' }}>{['日', '一', '二', '三', '四', '五', '六'][d]}</span>
+                              <input type="time" value={selectedStaff.schedule?.[d]?.start || ''} onChange={e => updateStaffSchedule(selectedStaff.id, d, 'start', e.target.value)} style={{ width: '85px', padding: '6px', fontSize: '12px', border: '1px solid #ddd', borderRadius: '4px' }} />
+                              <span style={{ fontSize: '10px' }}>-</span>
+                              <input type="time" value={selectedStaff.schedule?.[d]?.end || ''} onChange={e => updateStaffSchedule(selectedStaff.id, d, 'end', e.target.value)} style={{ width: '85px', padding: '6px', fontSize: '12px', border: '1px solid #ddd', borderRadius: '4px' }} />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ padding: '40px', textAlign: 'center', color: '#999', background: '#fff', borderRadius: '12px' }}>請選擇左邊既員工進行編輯</div>
+                )}
               </div>
             </div>
-          ))}
-          <button onClick={saveStaff} disabled={saving} style={{ width: '100%', padding: '14px', background: saving ? '#ccc' : '#A68B6A', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 600 }}>{saving ? '保存中...' : '💾 保存所有員工'}</button>
+          )}
+          {staff.length > 0 && <button onClick={saveStaff} disabled={saving} style={{ width: '100%', padding: '14px', background: saving ? '#ccc' : '#A68B6A', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 600, marginTop: '12px' }}>{saving ? '保存中...' : '💾 保存所有員工'}</button>}
         </div>}
+
         {activeTab === 'bookings' && <div>
           <div style={{ background: '#fff', padding: '10px', borderRadius: '10px', marginBottom: '10px', display: 'flex', gap: '8px' }}>
             <input type="text" placeholder="搜尋" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
@@ -340,12 +516,128 @@ export default function Admin() {
           </div>
         </div>}
 
+        {activeTab === 'orders' && <div>
+          <div style={{ background: '#fff', padding: '10px', borderRadius: '10px', marginBottom: '10px', display: 'flex', gap: '8px' }}>
+            <input type="text" placeholder="搜尋訂單" value={searchTermOrder} onChange={e => setSearchTermOrder(e.target.value)} style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
+            <select value={orderStatusFilter} onChange={e => setOrderStatusFilter(e.target.value)} style={{ padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }}><option value="all">全部</option><option value="pending">待處理</option><option value="paid">已付款</option><option value="shipped">已發貨</option><option value="completed">已完成</option></select>
+          </div>
+          {orders.length === 0 ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: '#999', background: '#fff', borderRadius: '10px' }}>暫時沒有訂單</div>
+          ) : (
+            <div style={{ background: '#fff', borderRadius: '10px', overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}><thead><tr style={{ background: '#FAF8F5' }}><th style={{ padding: '8px', textAlign: 'left' }}>訂單編號</th><th style={{ padding: '8px', textAlign: 'left' }}>客戶</th><th style={{ padding: '8px', textAlign: 'left' }}>產品</th><th style={{ padding: '8px', textAlign: 'left' }}>金額</th><th style={{ padding: '8px', textAlign: 'left' }}>狀態</th><th style={{ padding: '8px', textAlign: 'left' }}></th></tr></thead>
+              <tbody>{filteredOrders.slice(0, 20).map(o => <tr key={o.id} style={{ borderBottom: '1px solid #f5f5f5' }}><td style={{ padding: '8px' }}>#{o.id}<div style={{ fontSize: '10px', color: '#999' }}>{o.created_at?.split('T')[0]}</div></td><td style={{ padding: '8px' }}>{o.name}<div style={{ fontSize: '10px', color: '#999' }}>{o.phone}</div></td><td style={{ padding: '8px', fontSize: '11px' }}>{o.product_name || '-'}</td><td style={{ padding: '8px', fontWeight: 600 }}>${o.total}</td><td style={{ padding: '8px' }}><select value={o.status} onChange={e => updateOrderStatus(o.id, e.target.value)} style={{ padding: '4px', fontSize: '10px', background: o.status === 'pending' ? '#fef3c7' : o.status === 'paid' ? '#dbeafe' : o.status === 'shipped' ? '#f3e8ff' : '#dcfce7', borderRadius: '4px' }}><option value="pending">待處理</option><option value="paid">已付款</option><option value="shipped">已發貨</option><option value="completed">已完成</option></select></td><td style={{ padding: '8px' }}><button onClick={() => deleteOrder(o.id)} style={{ padding: '4px 6px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '10px' }}>刪</button></td></tr>)}</tbody></table>
+            </div>
+          )}
+        </div>}
+
+        {activeTab === 'products' && <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}><h3>💄 產品設定</h3><button onClick={addProduct} style={{ padding: '8px 16px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '6px' }}>+ 新增產品</button></div>
+          <div style={{ background: '#fff', padding: '10px', borderRadius: '10px', marginBottom: '10px' }}>
+            <input type="text" placeholder="搜尋產品" value={searchTermProduct} onChange={e => setSearchTermProduct(e.target.value)} style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
+          </div>
+          {filteredProducts.length === 0 ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: '#999', background: '#fff', borderRadius: '10px' }}>尚未有產品資料<br/><button onClick={addProduct} style={{ marginTop: '10px', padding: '8px 16px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '6px' }}>+ 新增產品</button></div>
+          ) : (
+            filteredProducts.map((p, i) => (
+              <div key={p.id} style={{ background: '#fff', borderRadius: '12px', marginBottom: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+                <div style={{ padding: '16px', borderBottom: '1px solid #f0f0f0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '50px', height: '50px', borderRadius: '12px', background: '#FAF8F5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>{p.emoji || '💄'}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input type="text" value={p.name} onChange={e => { const n = [...products]; n[i].name = e.target.value; setProducts(n) }} placeholder="產品名稱" style={{ fontSize: '16px', fontWeight: 600, padding: '6px 8px', border: '1px solid #eee', borderRadius: '6px', width: '150px' }} />
+                        <select value={p.category || ''} onChange={e => { const n = [...products]; n[i].category = e.target.value; setProducts(n) }} style={{ padding: '6px 8px', border: '1px solid #eee', borderRadius: '6px', fontSize: '13px' }}>
+                          <option value="">分類</option>
+                          <option value="護理">護理</option>
+                          <option value="洗護">洗護</option>
+                          <option value="造型">造型</option>
+                        </select>
+                      </div>
+                      <input type="text" value={p.description || ''} onChange={e => { const n = [...products]; n[i].description = e.target.value; setProducts(n) }} placeholder="產品描述" style={{ marginTop: '6px', padding: '6px 8px', border: '1px solid #eee', borderRadius: '6px', fontSize: '13px', width: '100%' }} />
+                    </div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={p.enabled} onChange={e => { const n = [...products]; n[i].enabled = e.target.checked; setProducts(n) }} />
+                      啟用
+                    </label>
+                  </div>
+                </div>
+                <div style={{ padding: '12px 16px', background: '#fafafa', display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '13px', color: '#666' }}>💰 價格</span>
+                    <span style={{ fontSize: '14px', color: '#A68B6A', fontWeight: 600 }}>$</span>
+                    <input type="number" value={p.price} onChange={e => { const n = [...products]; n[i].price = parseInt(e.target.value) || 0; setProducts(n) }} style={{ width: '70px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px' }} />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '13px', color: '#666' }}>🏷️ 原價</span>
+                    <span style={{ fontSize: '14px', color: '#999' }}>$</span>
+                    <input type="number" value={p.orig || 0} onChange={e => { const n = [...products]; n[i].orig = parseInt(e.target.value) || 0; setProducts(n) }} style={{ width: '70px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px' }} />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '13px', color: '#666' }}>🏷️ Emoji</span>
+                    <input type="text" value={p.emoji || ''} onChange={e => { const n = [...products]; n[i].emoji = e.target.value; setProducts(n) }} placeholder="💄" style={{ width: '50px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '16px', textAlign: 'center' }} />
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+          <button onClick={saveProducts} disabled={saving} style={{ width: '100%', padding: '14px', background: saving ? '#ccc' : '#A68B6A', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 600 }}>{saving ? '保存中...' : '💾 保存所有產品'}</button>
+        </div>}
+
+        {activeTab === 'tickets' && <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}><h3>🎫 套票設定</h3><button onClick={addTicket} style={{ padding: '8px 16px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '6px' }}>+ 新增套票</button></div>
+          <div style={{ background: '#fff', padding: '10px', borderRadius: '10px', marginBottom: '10px' }}>
+            <input type="text" placeholder="搜尋套票" value={searchTermTicket} onChange={e => setSearchTermTicket(e.target.value)} style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
+          </div>
+          {filteredTickets.length === 0 ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: '#999', background: '#fff', borderRadius: '10px' }}>尚未有套票資料<br/><button onClick={addTicket} style={{ marginTop: '10px', padding: '8px 16px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '6px' }}>+ 新增套票</button></div>
+          ) : (
+            filteredTickets.map((t, i) => (
+              <div key={t.id} style={{ background: '#fff', borderRadius: '12px', marginBottom: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+                <div style={{ padding: '16px', borderBottom: '1px solid #f0f0f0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '50px', height: '50px', borderRadius: '12px', background: '#FAF8F5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>{t.emoji || '🎫'}</div>
+                    <div style={{ flex: 1 }}>
+                      <input type="text" value={t.name} onChange={e => { const n = [...tickets]; n[i].name = e.target.value; setTickets(n) }} placeholder="套票名稱" style={{ fontSize: '16px', fontWeight: 600, padding: '6px 8px', border: '1px solid #eee', borderRadius: '6px', width: '150px', marginBottom: '6px' }} />
+                      <input type="text" value={t.features || ''} onChange={e => { const n = [...tickets]; n[i].features = e.target.value; setTickets(n) }} placeholder="套票內容 (用逗號分隔)" style={{ padding: '6px 8px', border: '1px solid #eee', borderRadius: '6px', fontSize: '13px', width: '100%' }} />
+                    </div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={t.enabled} onChange={e => { const n = [...tickets]; n[i].enabled = e.target.checked; setTickets(n) }} />
+                      啟用
+                    </label>
+                  </div>
+                </div>
+                <div style={{ padding: '12px 16px', background: '#fafafa', display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '13px', color: '#666' }}>💰 價格</span>
+                    <span style={{ fontSize: '14px', color: '#A68B6A', fontWeight: 600 }}>$</span>
+                    <input type="number" value={t.price} onChange={e => { const n = [...tickets]; n[i].price = parseInt(e.target.value) || 0; setTickets(n) }} style={{ width: '70px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px' }} />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '13px', color: '#666' }}>🏷️ 原價</span>
+                    <span style={{ fontSize: '14px', color: '#999' }}>$</span>
+                    <input type="number" value={t.orig || 0} onChange={e => { const n = [...tickets]; n[i].orig = parseInt(e.target.value) || 0; setTickets(n) }} style={{ width: '70px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px' }} />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '13px', color: '#666' }}>次數</span>
+                    <input type="number" value={t.times || 1} onChange={e => { const n = [...tickets]; n[i].times = parseInt(e.target.value) || 1; setTickets(n) }} style={{ width: '50px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px' }} />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '13px', color: '#666' }}>🏷️ Emoji</span>
+                    <input type="text" value={t.emoji || ''} onChange={e => { const n = [...tickets]; n[i].emoji = e.target.value; setTickets(n) }} placeholder="🎫" style={{ width: '50px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '16px', textAlign: 'center' }} />
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+          <button onClick={saveTickets} disabled={saving} style={{ width: '100%', padding: '14px', background: saving ? '#ccc' : '#A68B6A', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 600 }}>{saving ? '保存中...' : '💾 保存所有套票'}</button>
+        </div>}
+
         {activeTab === 'services' && <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}><h3>✂️ 服務設定</h3><button onClick={addService} style={{ padding: '8px 16px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '6px' }}>+ 新增服務</button></div>
           {services.length === 0 && <div style={{ padding: '40px', textAlign: 'center', color: '#999', background: '#fff', borderRadius: '10px' }}>尚未有服務資料<br/><button onClick={addService} style={{ marginTop: '10px', padding: '8px 16px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '6px' }}>+ 新增服務</button></div>}
           {services.map((sv, i) => (
             <div key={sv.id} style={{ background: '#fff', borderRadius: '12px', marginBottom: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-              {/* Header */}
               <div style={{ padding: '16px', borderBottom: '1px solid #f0f0f0' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div style={{ width: '50px', height: '50px', borderRadius: '12px', background: '#FAF8F5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
@@ -373,8 +665,6 @@ export default function Admin() {
                   </div>
                 </div>
               </div>
-              
-              {/* Price & Time */}
               <div style={{ padding: '12px 16px', background: '#fafafa', display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '13px', color: '#666' }}>💰 價格</span>
@@ -399,25 +689,4 @@ export default function Admin() {
         </div>}
 
         {activeTab === 'coupons' && <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}><h3>🎫 優惠</h3><button onClick={addCoupon} style={{ padding: '6px 12px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '6px' }}>+ 新增</button></div>
-          {coupons.map((c, i) => <div key={c.id} style={{ display: 'flex', gap: '8px', alignItems: 'center', padding: '10px', background: '#fff', borderRadius: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
-            <input type="checkbox" checked={c.enabled} onChange={e => { const n = [...coupons]; n[i].enabled = e.target.checked; setCoupons(n) }} />
-            <input type="text" value={c.code} onChange={e => { const n = [...coupons]; n[i].code = e.target.value.toUpperCase(); setCoupons(n) }} placeholder="CODE" style={{ width: '70px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px', textTransform: 'uppercase' }} />
-            <input type="text" value={c.name} onChange={e => { const n = [...coupons]; n[i].name = e.target.value; setCoupons(n) }} placeholder="優惠名稱" style={{ flex: '1 1 100px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
-            <select value={c.type || 'percent'} onChange={e => { const n = [...coupons]; n[i].type = e.target.value; setCoupons(n) }} style={{ padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }}>
-              <option value="percent">% 折</option>
-              <option value="fixed">減$</option>
-            </select>
-            <input type="number" value={c.discount} onChange={e => { const n = [...coupons]; n[i].discount = parseInt(e.target.value); setCoupons(n) }} placeholder="金額" style={{ width: '50px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
-            <input type="number" value={c.min_spend || 0} onChange={e => { const n = [...coupons]; n[i].min_spend = parseInt(e.target.value); setCoupons(n) }} placeholder="最低消費" style={{ width: '70px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
-          </div>)}
-          <button onClick={saveCoupons} disabled={saving} style={{ width: '100%', padding: '12px', background: saving ? '#ccc' : '#A68B6A', color: '#fff', border: 'none', borderRadius: '8px' }}>{saving ? '保存中...' : '保存'}</button>
-        </div>}
-
-        {activeTab === 'customers' && <div style={{ background: '#fff', borderRadius: '10px', overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}><thead><tr style={{ background: '#FAF8F5' }}><th style={{ padding: '10px', textAlign: 'left' }}>姓名</th><th style={{ padding: '10px', textAlign: 'left' }}>電話</th><th style={{ padding: '10px', textAlign: 'left' }}>電郵</th><th style={{ padding: '10px', textAlign: 'left' }}>積分</th></tr></thead><tbody>{users.map(u => <tr key={u.id} style={{ borderBottom: '1px solid #f5f5f5' }}><td style={{ padding: '10px' }}>{u.name}</td><td style={{ padding: '10px' }}>{u.phone}</td><td style={{ padding: '10px' }}>{u.email}</td><td style={{ padding: '10px' }}>{u.points || 0}</td></tr>)}</tbody></table>
-        </div>}
-      </div>
-    </div>
-  )
-}
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}><h3>🎫 優惠</h3><button onClick={addCoupon} style={{ padding: '6px 12px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '6px' }}>+ 新增</button
