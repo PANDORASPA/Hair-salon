@@ -2,58 +2,40 @@
 
 import { useState } from 'react'
 
-const FAQS = [
-  { q: '預約可以改期嗎？', a: '可以，請提前24小時通知我們改期。' },
-  { q: '取消預約會扣訂金嗎？', a: '24小時內取消會扣除訂金作為取消費用。' },
-  { q: '我可以帶自己既髮型圖片嗎？', a: '當然可以！我們鼓勵客人帶圖片溝通你想要既髮型。' },
-  { q: '燙髮可以維持幾耐？', a: '一般可以維持3-6個月，視乎個人髮質同護理。' },
-  { q: '有冇學生優惠？', a: '有！出示學生證可享9折優惠。' },
-  { q: '可以只剪劉海嗎？', a: '可以既，最少收費$100。' },
+const faqs = [
+  { q: '如何預約服務？', a: '您可以通過我們的網站直接預約，選擇服務項目、日期和時間，填寫資料後即可提交預約。' },
+  { q: '預約需要付訂金嗎？', a: '一般預約不需要付訂金，但如果您需要取消或更改預約，請提前一天通知我們。' },
+  { q: '營業時間是？', a: '我們的營業時間為早上9點至晚上7點，每逢星期一休息。' },
+  { q: '可以網上付款嗎？', a: '是的，我們支援信用卡、PayMe和轉數快等付款方式。' },
+  { q: '取消預約的政策？', a: '請於預約日期前1天取消或更改，否則可能會收取一定費用。' },
 ]
 
 export default function FAQ() {
   const [openIndex, setOpenIndex] = useState(null)
 
   return (
-    <div style={{ paddingTop: '80px', minHeight: '100vh', background: '#FAF8F5' }}>
-      <section style={{ padding: '40px 20px', background: '#A68B6A', textAlign: 'center' }}>
-        <h1 style={{ fontSize: '32px', color: '#fff', fontWeight: 400, letterSpacing: '0.15em' }}>FAQ</h1>
-        <p style={{ color: 'rgba(255,255,255,0.8)', marginTop: '10px' }}>常見問題</p>
+    <>
+      <section style={{ padding: '40px 0', background: '#FAF8F5', textAlign: 'center' }}>
+        <h1 style={{ fontSize: '36px', color: '#3D3D3D' }}>常見<span style={{ color: '#A68B6A' }}>問題</span></h1>
       </section>
 
-      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '40px 20px' }}>
-        {FAQS.map((faq, i) => (
-          <div 
-            key={i}
-            style={{ 
-              background: '#fff', 
-              borderRadius: '12px', 
-              marginBottom: '12px', 
-              border: '1px solid #E8E0D5',
-              overflow: 'hidden'
-            }}
-          >
-            <div 
-              onClick={() => setOpenIndex(openIndex === i ? null : i)}
-              style={{ 
-                padding: '20px', 
-                cursor: 'pointer',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}
-            >
-              <span style={{ fontWeight: '500', color: '#3D3D3D' }}>{faq.q}</span>
-              <span style={{ fontSize: '20px', color: '#A68B6A' }}>{openIndex === i ? '−' : '+'}</span>
+      <section style={{ padding: '60px 20px' }}>
+        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+          {faqs.map((faq, index) => (
+            <div key={index} style={{ background: '#fff', borderRadius: '12px', marginBottom: '15px', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+              <button onClick={() => setOpenIndex(openIndex === index ? null : index)} style={{ width: '100%', padding: '20px', background: 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 600, fontSize: '16px' }}>{faq.q}</span>
+                <span style={{ fontSize: '20px', color: '#A68B6A' }}>{openIndex === index ? '−' : '+'}</span>
+              </button>
+              {openIndex === index && (
+                <div style={{ padding: '0 20px 20px', color: '#666', lineHeight: 1.8 }}>
+                  {faq.a}
+                </div>
+              )}
             </div>
-            {openIndex === i && (
-              <div style={{ padding: '0 20px 20px', color: '#6B6B6B', fontSize: '14px' }}>
-                {faq.a}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
+          ))}
+        </div>
+      </section>
+    </>
   )
 }
