@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase'
 
 export default function Booking() {
   const [services, setServices] = useState([])
+  const [allServices, setAllServices] = useState([]) // All services for display
   const [coupons, setCoupons] = useState([])
   const [selectedService, setSelectedService] = useState(null)
   const [selectedDate, setSelectedDate] = useState(null)
@@ -30,15 +31,18 @@ export default function Booking() {
       ])
       
       if (servicesData.data) {
-        // Map to expected format
-        const mappedServices = servicesData.data.map(s => ({
+        // Store all services
+        const allSvcs = servicesData.data.map(s => ({
           id: s.id,
           name: s.name,
           price: s.price,
           time: s.time ? `${s.time}分` : '60分',
-          img: getServiceEmoji(s.name)
+          timeMins: s.time || 60,
+          emoji: s.emoji || getServiceEmoji(s.name),
+          serviceIds: [s.id] // For matching with staff services
         }))
-        setServices(mappedServices)
+        setAllServices(allSvcs)
+        setServices(allSvcs) // Initially show all services
       }
       
       if (couponsData.data) {
@@ -57,6 +61,29 @@ export default function Booking() {
     }
     fetchData()
   }, [])
+
+  // When staff is selected, filter services they can provide
+  useEffect(() => {
+    if (!selectedStaff) {
+      // No staff selected, show all services
+      setServices(allServices)
+    } else {
+      // Filter services based on staff's allowed services
+      const staff = staffList.find(s => s.id.toString() === selectedStaff)
+      if (staff && staff.services && staff.services.length > 0) {
+        const allowedServiceIds = staff.services
+        const filtered = allServices.filter(s => 
+          allowedServiceIds.includes(s.id) || allowedServiceIds.includes(s.serviceIds?.[0])
+        )
+        setServices(filtered.length > 0 ? filtered : allServices)
+      } else {
+        // Staff has no service restrictions, show all
+        setServices(allServices)
+      }
+    }
+    // Reset selected service when staff changes
+    setSelectedService(null)
+  }, [selectedStaff, staffList])
 
   const getServiceEmoji = (name) => {
     if (name.includes('剪')) return '✂️'
@@ -203,9 +230,57 @@ export default function Booking() {
             </div>
           </div>
 
+          {/* Staff Selection - Show first */}
+          <div style={{ marginBottom: '16px' }}>
+            <h4 style={{ marginBottom: '10px', fontSize: '15px' }}>選擇髮型師 (可留空隨機安排)</h4>
+            {availableStaff.length === 0 ? (
+              <div style={{ padding: '20px', textAlign: 'center', color: '#666', background: '#f5f5f5', borderRadius: '8px' }}>
+                該日期沒有髮型師當值，請選擇其他日期
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                <div
+                  onClick={() => setSelectedStaff('')}
+                  style={{
+                    padding: '14px',
+                    background: selectedStaff === '' ? '#A68B6A' : '#fff',
+                    color: selectedStaff === '' ? '#fff' : '#333',
+                    border: '1px solid ' + (selectedStaff === '' ? '#A68B6A' : '#e5e7eb'),
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    textAlign: 'center',
+                    fontSize: '14px'
+                  }}
+                >
+                  隨機安排
+                </div>
+                {availableStaff.map(s => (
+                  <div
+                    key={s.id}
+                    onClick={() => setSelectedStaff(s.id.toString())}
+                    style={{
+                      padding: '14px',
+                      background: selectedStaff === s.id.toString() ? '#A68B6A' : '#fff',
+                      color: selectedStaff === s.id.toString() ? '#fff' : '#333',
+                      border: '1px solid ' + (selectedStaff === s.id.toString() ? '#A68B6A' : '#e5e7eb'),
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      fontSize: '14px'
+                    }}
+                  >
+                    {s.name}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Service Selection */}
           <div style={{ background: '#fff', padding: '16px', borderRadius: '16px', marginBottom: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
-            <h3 style={{ marginBottom: '12px', fontSize: '16px' }}>選擇服務</h3>
+            <h3 style={{ marginBottom: '12px', fontSize: '16px' }}>
+              {selectedStaff ? `選擇 ${staffList.find(s => s.id.toString() === selectedStaff)?.name} 可提供的服務` : '選擇服務'}
+            </h3>
             {services.length === 0 ? (
               <p style={{ textAlign: 'center', color: '#999', padding: '20px' }}>暫時沒有服務</p>
             ) : (
@@ -227,7 +302,7 @@ export default function Booking() {
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span style={{ fontSize: '24px' }}>{service.img}</span>
+                      <span style={{ fontSize: '24px' }}>{service.emoji}</span>
                       <div>
                         <span style={{ fontWeight: 600, fontSize: '15px' }}>{service.name}</span>
                         <span style={{ color: '#666', marginLeft: '8px', fontSize: '13px' }}>{service.time}</span>
@@ -287,54 +362,6 @@ export default function Booking() {
               ))}
             </div>
           </div>
-
-          {/* Staff Selection */}
-          {selectedDate && (
-            <div style={{ marginTop: '16px' }}>
-              <h4 style={{ marginBottom: '10px', fontSize: '15px' }}>選擇髮型師</h4>
-              {availableStaff.length === 0 ? (
-                <div style={{ padding: '20px', textAlign: 'center', color: '#666', background: '#f5f5f5', borderRadius: '8px' }}>
-                  該日期沒有髮型師當值，請選擇其他日期
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
-                  <div
-                    onClick={() => setSelectedStaff('')}
-                    style={{
-                      padding: '14px',
-                      background: selectedStaff === '' ? '#A68B6A' : '#fff',
-                      color: selectedStaff === '' ? '#fff' : '#333',
-                      border: '1px solid ' + (selectedStaff === '' ? '#A68B6A' : '#e5e7eb'),
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      textAlign: 'center',
-                      fontSize: '14px'
-                    }}
-                  >
-                    隨機安排
-                  </div>
-                  {availableStaff.map(s => (
-                    <div
-                      key={s.id}
-                      onClick={() => setSelectedStaff(s.id.toString())}
-                      style={{
-                        padding: '14px',
-                        background: selectedStaff === s.id.toString() ? '#A68B6A' : '#fff',
-                        color: selectedStaff === s.id.toString() ? '#fff' : '#333',
-                        border: '1px solid ' + (selectedStaff === s.id.toString() ? '#A68B6A' : '#e5e7eb'),
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        textAlign: 'center',
-                        fontSize: '14px'
-                      }}
-                    >
-                      {s.name}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Form */}
           <div style={{ background: '#fff', padding: '16px', borderRadius: '16px', marginTop: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
