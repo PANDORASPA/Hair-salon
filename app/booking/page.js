@@ -96,16 +96,15 @@ export default function Booking() {
       .insert([booking])
       .select()
 
-    console.log('Insert result - data:', data)
-    console.log('Insert result - error:', error)
+    console.log('Insert data:', data)
+    console.log('Insert error:', error)
 
     if (error) {
-      alert('預約失敗: ' + (error.message || error.code || JSON.stringify(error)))
+      alert('錯誤: ' + JSON.stringify(error))
       return
     }
 
-    // 顯示成功
-    console.log('Booking saved successfully:', data)
+    alert('預約成功！')
     setBookingRef(ref)
     setShowModal(true)
   }
