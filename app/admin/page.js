@@ -183,7 +183,7 @@ export default function Admin() {
 
   const addCoupon = () => {
     const newId = Math.max(...coupons.map(c => c.id), 0) + 1
-    setCoupons([...coupons, { id: newId, code: 'NEW', name: '新優惠', discount: 10, type: 'percent', enabled: true }])
+    setCoupons([...coupons, { id: newId, code: 'NEW', name: '新優惠', discount: 10, type: 'percent', min_spend: 0, enabled: true }])
   }
 
   const filteredBookings = bookings.filter(b => (!searchTerm || b.name?.includes(searchTerm) || b.phone?.includes(searchTerm)) && (statusFilter === 'all' || b.status === statusFilter))
@@ -243,40 +243,92 @@ export default function Admin() {
         </div>}
 
         {activeTab === 'staff' && <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}><h3>💇 員工設定</h3><button onClick={addStaff} style={{ padding: '6px 12px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '6px' }}>+ 新增</button></div>
-          {staff.map(s => <div key={s.id} style={{ background: '#fff', padding: '12px', borderRadius: '10px', marginBottom: '10px' }}>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '10px' }}>
-              <input type="checkbox" checked={s.enabled} onChange={e => updateStaffField(s.id, 'enabled', e.target.checked)} />
-              <input type="text" value={s.name} onChange={e => updateStaffField(s.id, 'name', e.target.value)} placeholder="姓名" style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
-              <select value={s.role} onChange={e => updateStaffField(s.id, 'role', e.target.value)} style={{ padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }}><option>髮型師</option><option>助理</option><option>經理</option></select>
-              <input type="text" value={s.phone || ''} onChange={e => updateStaffField(s.id, 'phone', e.target.value)} placeholder="電話" style={{ width: '100px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
-              <button onClick={() => deleteStaff(s.id)} style={{ padding: '6px 10px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '11px' }}>刪除</button>
-            </div>
-            <div style={{ marginBottom: '10px' }}>
-              <div style={{ fontSize: '12px', color: '#666', marginBottom: '5px' }}>可提供服務：</div>
-              <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>{services.map(sv => <button key={sv.id} onClick={() => toggleStaffService(s.id, sv.id)} style={{ padding: '4px 8px', background: s.services?.includes(sv.id) ? '#A68B6A' : '#f5f5f5', color: s.services?.includes(sv.id) ? '#fff' : '#666', border: 'none', borderRadius: '4px', fontSize: '11px' }}>{sv.name}</button>)}</div>
-            </div>
-            
-            {/* Calendar Schedule */}
-            <div style={{ marginBottom: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <div style={{ fontSize: '12px', color: '#666' }}>上班時間：</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <button onClick={prevMonth} style={{ padding: '4px 8px', background: '#f5f5f5', border: 'none', borderRadius: '4px' }}>◀</button>
-                  <span style={{ fontSize: '12px', minWidth: '80px', textAlign: 'center' }}>{getMonthName()}</span>
-                  <button onClick={nextMonth} style={{ padding: '4px 8px', background: '#f5f5f5', border: 'none', borderRadius: '4px' }}>▶</button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}><h3>💇 員工設定</h3><button onClick={addStaff} style={{ padding: '6px 12px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '6px' }}>+ 新增員工</button></div>
+          {staff.length === 0 && <div style={{ padding: '40px', textAlign: 'center', color: '#999', background: '#fff', borderRadius: '10px' }}>尚未有員工資料<br/><button onClick={addStaff} style={{ marginTop: '10px', padding: '8px 16px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '6px' }}>+ 新增員工</button></div>}
+          {staff.map(s => (
+            <div key={s.id} style={{ background: '#fff', borderRadius: '12px', marginBottom: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+              {/* Header - Basic Info */}
+              <div style={{ padding: '16px', borderBottom: '1px solid #f0f0f0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: s.enabled ? '#A68B6A' : '#ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '20px', fontWeight: 700 }}>
+                    {s.name?.charAt(0) || '?'}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input type="text" value={s.name} onChange={e => updateStaffField(s.id, 'name', e.target.value)} placeholder="姓名" style={{ fontSize: '16px', fontWeight: 600, padding: '6px 8px', border: '1px solid #eee', borderRadius: '6px', width: '100px' }} />
+                      <select value={s.role} onChange={e => updateStaffField(s.id, 'role', e.target.value)} style={{ padding: '6px 8px', border: '1px solid #eee', borderRadius: '6px', fontSize: '13px' }}>
+                        <option>髮型師</option>
+                        <option>助理</option>
+                        <option>經理</option>
+                      </select>
+                    </div>
+                    <input type="text" value={s.phone || ''} onChange={e => updateStaffField(s.id, 'phone', e.target.value)} placeholder="電話 (可留空)" style={{ marginTop: '6px', padding: '6px 8px', border: '1px solid #eee', borderRadius: '6px', fontSize: '13px', width: '140px' }} />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={s.enabled} onChange={e => updateStaffField(s.id, 'enabled', e.target.checked)} />
+                      啟用
+                    </label>
+                    <button onClick={() => deleteStaff(s.id)} style={{ padding: '6px 10px', background: '#fef2f2', color: '#ef4444', border: 'none', borderRadius: '6px', fontSize: '12px' }}>刪除</button>
+                  </div>
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px', fontSize: '10px', textAlign: 'center', marginBottom: '4px' }}>
-                {['日', '一', '二', '三', '四', '五', '六'].map(d => <div key={d} style={{ padding: '4px', background: '#f5f5f5', borderRadius: '4px' }}>{d}</div>)}
+              
+              {/* Services */}
+              <div style={{ padding: '12px 16px', borderBottom: '1px solid #f0f0f0', background: '#fafafa' }}>
+                <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px', fontWeight: 500 }}>可提供服務</div>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  {services.map(sv => (
+                    <button key={sv.id} onClick={() => toggleStaffService(s.id, sv.id)} 
+                      style={{ padding: '6px 12px', background: s.services?.includes(sv.id) ? '#A68B6A' : '#fff', 
+                      color: s.services?.includes(sv.id) ? '#fff' : '#666', border: '1px solid #e5e5e5', 
+                      borderRadius: '20px', fontSize: '12px', cursor: 'pointer' }}>
+                      {sv.name}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px' }}>
-                {getCalendarDays().map((date, idx) => {
-                  if (!date) return <div key={idx} style={{ minHeight: '60px' }}></div>
-                  const dateKey = formatDateKey(date)
-                  const daySchedule = s.schedule?.[dateKey]
-                  const isOff = s.daysOff?.includes(dateKey)
-                  const isToday = formatDateKey(new Date()) === dateKey
+              
+              {/* Weekly Schedule */}
+              <div style={{ padding: '12px 16px' }}>
+                <div style={{ fontSize: '12px', color: '#666', marginBottom: '10px', fontWeight: 500 }}>每週上班時間 (點擊切換)</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
+                  {['日', '一', '二', '三', '四', '五', '六'].map((day, idx) => {
+                    const dayKey = idx.toString()
+                    const daySchedule = s.schedule?.[dayKey]
+                    const isOff = s.daysOff?.includes(dayKey)
+                    return (
+                      <div key={idx} style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>{day}</div>
+                        {isOff ? (
+                          <div onClick={() => toggleDailyOff(s.id, dayKey)} style={{ padding: '8px 4px', background: '#ef4444', color: '#fff', borderRadius: '6px', fontSize: '11px', cursor: 'pointer' }}>放假</div>
+                        ) : daySchedule?.start ? (
+                          <div onClick={() => toggleDailyOff(s.id, dayKey)} style={{ padding: '8px 4px', background: '#22c55e', color: '#fff', borderRadius: '6px', fontSize: '10px', cursor: 'pointer' }}>
+                            {daySchedule.start}-{daySchedule.end}
+                          </div>
+                        ) : (
+                          <div onClick={() => updateStaffSchedule(s.id, dayKey, 'start', '09:00')} style={{ padding: '8px 4px', background: '#f5f5f5', color: '#999', borderRadius: '6px', fontSize: '11px', cursor: 'pointer' }}>休息</div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+                <div style={{ marginTop: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <span style={{ fontSize: '11px', color: '#999' }}>編輯時間：</span>
+                  {['0', '1', '2', '3', '4', '5', '6'].map(d => (
+                    <div key={d} style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                      <span style={{ fontSize: '10px', width: '12px' }}>{['日', '一', '二', '三', '四', '五', '六'][d]}</span>
+                      <input type="time" value={s.schedule?.[d]?.start || ''} onChange={e => updateStaffSchedule(s.id, d, 'start', e.target.value)} style={{ width: '70px', padding: '4px', fontSize: '10px', border: '1px solid #ddd', borderRadius: '4px' }} />
+                      <span style={{ fontSize: '10px' }}>-</span>
+                      <input type="time" value={s.schedule?.[d]?.end || ''} onChange={e => updateStaffSchedule(s.id, d, 'end', e.target.value)} style={{ width: '70px', padding: '4px', fontSize: '10px', border: '1px solid #ddd', borderRadius: '4px' }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+          <button onClick={saveStaff} disabled={saving} style={{ width: '100%', padding: '14px', background: saving ? '#ccc' : '#A68B6A', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 600 }}>{saving ? '保存中...' : '💾 保存所有員工'}</button>
+        </div>}
                   return (
                     <div key={idx} onClick={() => setSelectedStaff(selectedStaff === s.id && dateKey === selectedStaff?.dateKey ? null : { staffId: s.id, dateKey })}
                       style={{ 
@@ -351,11 +403,16 @@ export default function Admin() {
 
         {activeTab === 'coupons' && <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}><h3>🎫 優惠</h3><button onClick={addCoupon} style={{ padding: '6px 12px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '6px' }}>+ 新增</button></div>
-          {coupons.map((c, i) => <div key={c.id} style={{ display: 'flex', gap: '8px', alignItems: 'center', padding: '10px', background: '#fff', borderRadius: '8px', marginBottom: '8px' }}>
+          {coupons.map((c, i) => <div key={c.id} style={{ display: 'flex', gap: '8px', alignItems: 'center', padding: '10px', background: '#fff', borderRadius: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
             <input type="checkbox" checked={c.enabled} onChange={e => { const n = [...coupons]; n[i].enabled = e.target.checked; setCoupons(n) }} />
-            <input type="text" value={c.code} onChange={e => { const n = [...coupons]; n[i].code = e.target.value.toUpperCase(); setCoupons(n) }} style={{ width: '70px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px', textTransform: 'uppercase' }} />
-            <input type="text" value={c.name} onChange={e => { const n = [...coupons]; n[i].name = e.target.value; setCoupons(n) }} style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
-            <input type="number" value={c.discount} onChange={e => { const n = [...coupons]; n[i].discount = parseInt(e.target.value); setCoupons(n) }} style={{ width: '50px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
+            <input type="text" value={c.code} onChange={e => { const n = [...coupons]; n[i].code = e.target.value.toUpperCase(); setCoupons(n) }} placeholder="CODE" style={{ width: '70px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px', textTransform: 'uppercase' }} />
+            <input type="text" value={c.name} onChange={e => { const n = [...coupons]; n[i].name = e.target.value; setCoupons(n) }} placeholder="優惠名稱" style={{ flex: '1 1 100px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
+            <select value={c.type || 'percent'} onChange={e => { const n = [...coupons]; n[i].type = e.target.value; setCoupons(n) }} style={{ padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }}>
+              <option value="percent">% 折</option>
+              <option value="fixed">減$</option>
+            </select>
+            <input type="number" value={c.discount} onChange={e => { const n = [...coupons]; n[i].discount = parseInt(e.target.value); setCoupons(n) }} placeholder="金額" style={{ width: '50px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
+            <input type="number" value={c.min_spend || 0} onChange={e => { const n = [...coupons]; n[i].min_spend = parseInt(e.target.value); setCoupons(n) }} placeholder="最低消費" style={{ width: '70px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
           </div>)}
           <button onClick={saveCoupons} disabled={saving} style={{ width: '100%', padding: '12px', background: saving ? '#ccc' : '#A68B6A', color: '#fff', border: 'none', borderRadius: '8px' }}>{saving ? '保存中...' : '保存'}</button>
         </div>}
