@@ -14,25 +14,25 @@ const services = [
 export default function Services() {
   return (
     <>
-      <section style={{ padding: '40px 0', background: '#FAF8F5', textAlign: 'center' }}>
-        <h1 style={{ fontSize: '36px', color: '#3D3D3D' }}>服務<span style={{ color: '#A68B6A' }}>項目</span></h1>
-        <p style={{ color: '#666', marginTop: '10px' }}>專業團隊為您提供優質服務</p>
+      <section style={{ padding: '30px 16px', background: '#FAF8F5', textAlign: 'center' }}>
+        <h1 style={{ fontSize: '28px', color: '#3D3D3D' }}>服務<span style={{ color: '#A68B6A' }}>項目</span></h1>
+        <p style={{ color: '#666', marginTop: '8px', fontSize: '14px' }}>專業團隊為您提供優質服務</p>
       </section>
 
-      <section style={{ padding: '60px 20px' }}>
+      <section style={{ padding: '24px 12px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '25px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
             {services.map(service => (
-              <div key={service.id} style={{ background: '#fff', border: '1px solid #E8E0D5', borderRadius: '16px', padding: '25px' }}>
-                <div style={{ height: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '50px', background: '#FAF8F5', borderRadius: '12px', marginBottom: '20px' }}>{service.img}</div>
-                <h3 style={{ fontSize: '22px', fontWeight: 600, marginBottom: '10px' }}>{service.name}</h3>
-                <p style={{ color: '#666', marginBottom: '15px', lineHeight: 1.6 }}>{service.desc}</p>
+              <div key={service.id} style={{ background: '#fff', border: '1px solid #E8E0D5', borderRadius: '12px', padding: '16px' }}>
+                <div style={{ height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', background: '#FAF8F5', borderRadius: '10px', marginBottom: '16px' }}>{service.img}</div>
+                <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px' }}>{service.name}</h3>
+                <p style={{ color: '#666', marginBottom: '12px', lineHeight: 1.5, fontSize: '14px' }}>{service.desc}</p>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <span style={{ fontSize: '28px', fontWeight: 700, color: '#A68B6A' }}>${service.price}</span>
-                    <span style={{ color: '#999', marginLeft: '10px' }}>{service.time}</span>
+                    <span style={{ fontSize: '24px', fontWeight: 700, color: '#A68B6A' }}>${service.price}</span>
+                    <span style={{ color: '#999', marginLeft: '8px', fontSize: '13px' }}>{service.time}</span>
                   </div>
-                  <Link href="/booking" style={{ padding: '12px 24px', background: 'linear-gradient(135deg, #A68B6A, #8B7355)', color: '#fff', borderRadius: '8px', textDecoration: 'none', fontWeight: 600 }}>預約</Link>
+                  <Link href="/booking" style={{ padding: '12px 20px', background: 'linear-gradient(135deg, #A68B6A, #8B7355)', color: '#fff', borderRadius: '8px', textDecoration: 'none', fontWeight: 600, fontSize: '14px' }}>預約</Link>
                 </div>
               </div>
             ))}
