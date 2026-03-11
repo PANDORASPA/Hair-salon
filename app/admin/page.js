@@ -161,8 +161,18 @@ export default function Admin() {
 
   const saveProducts = async () => {
     setSaving(true)
-    for (const p of products) await supabase.from('products').upsert(p)
-    alert('已保存')
+    try {
+      for (const p of products) {
+        const { id, name, category, description, price, orig, emoji, enabled } = p
+        await supabase.from('products').upsert({ 
+          id, name, category, description, price, orig, emoji, enabled 
+        })
+      }
+      alert('已保存')
+    } catch (err) {
+      console.error(err)
+      alert('保存失敗: ' + err.message)
+    }
     setSaving(false)
   }
 
@@ -173,8 +183,18 @@ export default function Admin() {
 
   const saveTickets = async () => {
     setSaving(true)
-    for (const t of tickets) await supabase.from('tickets').upsert(t)
-    alert('已保存')
+    try {
+      for (const t of tickets) {
+        const { id, name, price, orig, times, features, emoji, enabled } = t
+        await supabase.from('tickets').upsert({ 
+          id, name, price, orig, times, features, emoji, enabled 
+        })
+      }
+      alert('已保存')
+    } catch (err) {
+      console.error(err)
+      alert('保存失敗: ' + err.message)
+    }
     setSaving(false)
   }
 
