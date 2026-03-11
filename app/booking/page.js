@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { supabase } from '../../lib/supabase'
 
 const services = [
   { id: 1, name: '剪髮', price: 280, time: '60分', img: '✂️' },
@@ -63,7 +64,7 @@ export default function Booking() {
     return days
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedService || !selectedDate || !selectedTime || !formData.name || !formData.phone) {
       alert('請填寫所有必填項目')
       return
@@ -76,21 +77,27 @@ export default function Booking() {
     const booking = {
       ref,
       service: selectedService.name,
-      servicePrice: selectedService.price,
+      service_price: selectedService.price,
       date: `${selectedDate}/${currentMonth + 1}/${currentYear}`,
       time: selectedTime,
       name: formData.name,
       phone: formData.phone,
       coupon: formData.coupon || null,
-      finalPrice,
+      final_price: finalPrice,
       status: 'pending',
-      createdAt: new Date().toISOString()
+      created_at: new Date().toISOString()
     }
 
-    // 儲存到 localStorage
-    const bookings = JSON.parse(localStorage.getItem('viva_bookings') || '[]')
-    bookings.push(booking)
-    localStorage.setItem('viva_bookings', JSON.stringify(bookings))
+    // 儲存到 Supabase
+    const { error } = await supabase
+      .from('bookings')
+      .insert([booking])
+
+    if (error) {
+      console.error('Error saving booking:', error)
+      alert('預約失敗，請稍後再試')
+      return
+    }
 
     // 顯示成功
     setBookingRef(ref)
@@ -107,92 +114,100 @@ export default function Booking() {
 
   return (
     <>
-      <section style={{ padding: '40px 0', minHeight: 'auto', background: '#FAF8F5' }}>
+      <section style={{ padding: '30px 16px', minHeight: 'auto', background: '#FAF8F5' }}>
         <div style={{ textAlign: 'center' }}>
-          <h1 style={{ fontSize: '36px', color: '#3D3D3D' }}>預約<span style={{ color: '#A68B6A' }}>服務</span></h1>
+          <h1 style={{ fontSize: '28px', color: '#3D3D3D' }}>預約<span style={{ color: '#A68B6A' }}>服務</span></h1>
         </div>
       </section>
 
-      <section style={{ padding: '60px 20px' }}>
+      <section style={{ padding: '24px 12px' }}>
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          {/* Steps */}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '30px' }}>
-            <div style={{ padding: '10px 20px', borderRadius: '8px', background: selectedService ? '#A68B6A' : '#e5e7eb', color: selectedService ? '#fff' : '#999', fontSize: '14px' }}>
-              1. 選擇服務
+          {/* Steps - Mobile Friendly */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
+            <div style={{ padding: '8px 12px', borderRadius: '8px', background: selectedService ? '#A68B6A' : '#e5e7eb', color: selectedService ? '#fff' : '#999', fontSize: '12px', minWidth: '80px', textAlign: 'center' }}>
+              選擇服務
             </div>
-            <div style={{ padding: '10px 20px', borderRadius: '8px', background: selectedDate && selectedTime ? '#A68B6A' : '#e5e7eb', color: selectedDate && selectedTime ? '#fff' : '#999', fontSize: '14px' }}>
-              2. 選擇時間
+            <div style={{ padding: '8px 12px', borderRadius: '8px', background: selectedDate && selectedTime ? '#A68B6A' : '#e5e7eb', color: selectedDate && selectedTime ? '#fff' : '#999', fontSize: '12px', minWidth: '80px', textAlign: 'center' }}>
+              選擇時間
             </div>
-            <div style={{ padding: '10px 20px', borderRadius: '8px', background: formData.name && formData.phone ? '#A68B6A' : '#e5e7eb', color: formData.name && formData.phone ? '#fff' : '#999', fontSize: '14px' }}>
-              3. 填寫資料
+            <div style={{ padding: '8px 12px', borderRadius: '8px', background: formData.name && formData.phone ? '#A68B6A' : '#e5e7eb', color: formData.name && formData.phone ? '#fff' : '#999', fontSize: '12px', minWidth: '80px', textAlign: 'center' }}>
+              填寫資料
             </div>
           </div>
 
-          {/* Service Selection */}
-          <div style={{ background: '#fff', padding: '25px', borderRadius: '16px', marginBottom: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
-            <h3 style={{ marginBottom: '15px' }}>選擇服務</h3>
+          {/* Service Selection - Mobile Optimized */}
+          <div style={{ background: '#fff', padding: '16px', borderRadius: '16px', marginBottom: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+            <h3 style={{ marginBottom: '12px', fontSize: '16px' }}>選擇服務</h3>
             <div style={{ display: 'grid', gap: '10px' }}>
               {services.map(service => (
                 <div 
                   key={service.id}
                   onClick={() => setSelectedService(service)}
                   style={{ 
-                    padding: '15px', 
+                    padding: '14px', 
                     border: '2px solid ' + (selectedService?.id === service.id ? '#A68B6A' : '#e5e7eb'),
                     borderRadius: '8px',
                     cursor: 'pointer',
                     background: selectedService?.id === service.id ? '#FAF8F5' : 'transparent',
                     display: 'flex',
                     justifyContent: 'space-between',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    minHeight: '60px'
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <span style={{ fontSize: '24px' }}>{service.img}</span>
                     <div>
-                      <span style={{ fontWeight: 600, fontSize: '16px' }}>{service.name}</span>
-                      <span style={{ color: '#666', marginLeft: '10px', fontSize: '14px' }}>{service.time}</span>
+                      <span style={{ fontWeight: 600, fontSize: '15px' }}>{service.name}</span>
+                      <span style={{ color: '#666', marginLeft: '8px', fontSize: '13px' }}>{service.time}</span>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '20px', fontWeight: 700, color: '#A68B6A' }}>${service.price}</span>
-                    {selectedService?.id === service.id && <span style={{ color: '#A68B6A', fontSize: '20px' }}>✓</span>}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '18px', fontWeight: 700, color: '#A68B6A' }}>${service.price}</span>
+                    {selectedService?.id === service.id && <span style={{ color: '#A68B6A', fontSize: '18px' }}>✓</span>}
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Calendar */}
-          <div style={{ background: '#fff', padding: '25px', borderRadius: '16px', marginBottom: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-              <button onClick={() => { setCurrentMonth(m => m === 0 ? 11 : m - 1); if (currentMonth === 0) setCurrentYear(y => y - 1) }} style={{ padding: '8px 16px', background: '#fff', border: '2px solid #A68B6A', color: '#A68B6A', borderRadius: '8px', cursor: 'pointer' }}>◀</button>
-              <h3>{currentYear}年{currentMonth + 1}月</h3>
-              <button onClick={() => { setCurrentMonth(m => m === 11 ? 0 : m + 1); if (currentMonth === 11) setCurrentYear(y => y + 1) }} style={{ padding: '8px 16px', background: '#fff', border: '2px solid #A68B6A', color: '#A68B6A', borderRadius: '8px', cursor: 'pointer' }}>▶</button>
+          {/* Calendar - Mobile Optimized */}
+          <div style={{ background: '#fff', padding: '16px', borderRadius: '16px', marginBottom: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <button onClick={() => { setCurrentMonth(m => m === 0 ? 11 : m - 1); if (currentMonth === 0) setCurrentYear(y => y - 1) }} style={{ padding: '10px 14px', background: '#fff', border: '2px solid #A68B6A', color: '#A68B6A', borderRadius: '8px', cursor: 'pointer', fontSize: '14px' }}>◀</button>
+              <h3 style={{ fontSize: '16px' }}>{currentYear}年{currentMonth + 1}月</h3>
+              <button onClick={() => { setCurrentMonth(m => m === 11 ? 0 : m + 1); if (currentMonth === 11) setCurrentYear(y => y + 1) }} style={{ padding: '10px 14px', background: '#fff', border: '2px solid #A68B6A', color: '#A68B6A', borderRadius: '8px', cursor: 'pointer', fontSize: '14px' }}>▶</button>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '5px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
               {['日', '一', '二', '三', '四', '五', '六'].map(d => (
-                <div key={d} style={{ textAlign: 'center', fontWeight: 600, color: '#666', padding: '10px' }}>{d}</div>
+                <div key={d} style={{ textAlign: 'center', fontWeight: 600, color: '#666', padding: '8px', fontSize: '12px' }}>{d}</div>
               ))}
               {renderCalendar()}
             </div>
           </div>
 
-          {/* Time Slots */}
-          <div style={{ marginTop: '20px' }}>
-            <h4 style={{ marginBottom: '10px' }}>選擇時間</h4>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+          {/* Time Slots - Mobile Optimized */}
+          <div style={{ marginTop: '16px' }}>
+            <h4 style={{ marginBottom: '10px', fontSize: '15px' }}>選擇時間</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
               {timeSlots.map(time => (
                 <div
                   key={time}
                   onClick={() => setSelectedTime(time)}
                   style={{
-                    padding: '10px 16px',
+                    padding: '14px',
                     background: selectedTime === time ? '#A68B6A' : '#fff',
                     color: selectedTime === time ? '#fff' : '#333',
                     border: '1px solid ' + (selectedTime === time ? '#A68B6A' : '#e5e7eb'),
                     borderRadius: '8px',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    textAlign: 'center',
+                    fontSize: '15px',
+                    fontWeight: 500,
+                    minHeight: '48px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}
                 >
                   {time}
@@ -201,37 +216,37 @@ export default function Booking() {
             </div>
           </div>
 
-          {/* Form */}
-          <div style={{ background: '#fff', padding: '25px', borderRadius: '16px', marginTop: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
-            <h3 style={{ marginBottom: '15px' }}>客戶資料</h3>
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>姓名 *</label>
-              <input type="text" placeholder="請輸入您的姓名" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} style={{ width: '100%', padding: '12px', border: '1px solid #e5e7eb', borderRadius: '8px' }} />
+          {/* Form - Mobile Optimized */}
+          <div style={{ background: '#fff', padding: '16px', borderRadius: '16px', marginTop: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+            <h3 style={{ marginBottom: '12px', fontSize: '16px' }}>客戶資料</h3>
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600, fontSize: '14px' }}>姓名 *</label>
+              <input type="text" placeholder="請輸入您的姓名" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} style={{ width: '100%', padding: '14px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '16px' }} />
             </div>
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>電話 *</label>
-              <input type="tel" placeholder="請輸入您的電話號碼" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} style={{ width: '100%', padding: '12px', border: '1px solid #e5e7eb', borderRadius: '8px' }} />
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600, fontSize: '14px' }}>電話 *</label>
+              <input type="tel" placeholder="請輸入您的電話號碼" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} style={{ width: '100%', padding: '14px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '16px' }} />
             </div>
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>優惠碼</label>
-              <select value={formData.coupon} onChange={e => setFormData({...formData, coupon: e.target.value})} style={{ width: '100%', padding: '12px', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600, fontSize: '14px' }}>優惠碼</label>
+              <select value={formData.coupon} onChange={e => setFormData({...formData, coupon: e.target.value})} style={{ width: '100%', padding: '14px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '16px' }}>
                 <option value="">請選擇優惠碼</option>
                 {coupons.map(c => (
                   <option key={c.code} value={c.code}>{c.name} - {c.desc}</option>
                 ))}
               </select>
             </div>
-            <button onClick={handleSubmit} style={{ width: '100%', padding: '15px', background: 'linear-gradient(135deg, #A68B6A, #8B7355)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '16px', cursor: 'pointer' }}>
+            <button onClick={handleSubmit} style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #A68B6A, #8B7355)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '16px', cursor: 'pointer', minHeight: '52px' }}>
               提交預約 {finalPrice > 0 && "$" + finalPrice}
             </button>
           </div>
         </div>
       </section>
 
-      {/* Success Modal */}
+      {/* Success Modal - Mobile Optimized */}
       {showModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 300 }}>
-          <div style={{ background: '#fff', borderRadius: '16px', padding: '30px', maxWidth: '400px', width: '90%', textAlign: 'center' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 300, padding: '16px' }}>
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', maxWidth: '400px', width: '100%', textAlign: 'center', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ fontSize: '60px', marginBottom: '20px' }}>✅</div>
             <h2 style={{ color: '#A68B6A', marginBottom: '10px' }}>預約成功！</h2>
             <p style={{ color: '#666', marginBottom: '20px' }}>預約編號：<strong>{bookingRef}</strong></p>
