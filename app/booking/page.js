@@ -89,17 +89,23 @@ export default function Booking() {
     }
 
     // 儲存到 Supabase
-    const { error } = await supabase
+    console.log('Submitting booking:', booking)
+    
+    const { data, error } = await supabase
       .from('bookings')
       .insert([booking])
+      .select()
+
+    console.log('Insert result - data:', data)
+    console.log('Insert result - error:', error)
 
     if (error) {
-      console.error('Error saving booking:', error)
-      alert('預約失敗，請聯絡本店: ' + error.message)
+      alert('預約失敗: ' + (error.message || error.code || JSON.stringify(error)))
       return
     }
 
     // 顯示成功
+    console.log('Booking saved successfully:', data)
     setBookingRef(ref)
     setShowModal(true)
   }
