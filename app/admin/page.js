@@ -709,4 +709,4 @@ export default function Admin() {
         </div>}
 
         {activeTab === 'coupons' && <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}><h3>🎫 優惠</h3><button onClick={addCoupon} style={{ padding: '6px 12px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '6px' }}>+ 新增</button
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}><h3>🏷️ 優惠</h3><button onClick={addCoupon} style={{ padding: '6px 12px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '6px' }}>+ 新增</button>
