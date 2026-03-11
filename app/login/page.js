@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
 export default function Login() {
@@ -10,26 +10,209 @@ export default function Login() {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [user, setUser] = useState(null)
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    // 檢查是否已登入
+    const currentUser = localStorage.getItem('viva_current_user')
+    if (currentUser) {
+      setUser(JSON.parse(currentUser))
+    }
+  }, [])
+
+  const handleRegister = (e) => {
     e.preventDefault()
     setLoading(true)
-    
+    setError('')
+    setSuccess('')
+
+    // 模擬網絡延遲
     setTimeout(() => {
+      // 獲取現有用戶
+      const users = JSON.parse(localStorage.getItem('viva_users') || '[]')
+      
+      // 檢查email是否已註冊
+      if (users.find(u => u.email === email)) {
+        setError('此電郵已註冊，請直接登入')
+        setLoading(false)
+        return
+      }
+
+      // 檢查電話是否已註冊
+      if (users.find(u => u.phone === phone)) {
+        setError('此電話號碼已註冊')
+        setLoading(false)
+        return
+      }
+
+      // 創建新用戶
+      const newUser = {
+        id: Date.now(),
+        name,
+        phone,
+        email,
+        password,
+        points: 100, // 新用戶送100積分
+        createdAt: new Date().toISOString()
+      }
+
+      users.push(newUser)
+      localStorage.setItem('viva_users', JSON.stringify(users))
+
+      // 自動登入
+      localStorage.setItem('viva_current_user', JSON.stringify(newUser))
+      setUser(newUser)
+      setSuccess('註冊成功！歡迎加入 VIVA HAIR！')
       setLoading(false)
-      alert(isLogin ? '登入成功！' : '註冊成功，歡迎加入 VIVA HAIR！')
     }, 1000)
   }
 
+  const handleLogin = (e) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+
+    setTimeout(() => {
+      const users = JSON.parse(localStorage.getItem('viva_users') || '[]')
+      const foundUser = users.find(u => u.email === email && u.password === password)
+
+      if (foundUser) {
+        localStorage.setItem('viva_current_user', JSON.stringify(foundUser))
+        setUser(foundUser)
+        setSuccess('登入成功！')
+      } else {
+        setError('電郵或密碼錯誤，請重試')
+      }
+      setLoading(false)
+    }, 1000)
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('viva_current_user')
+    setUser(null)
+    setEmail('')
+    setPassword('')
+    setName('')
+    setPhone('')
+    window.location.href = '/'
+  }
+
+  const handleSubmit = (e) => {
+    if (isLogin) {
+      handleLogin(e)
+    } else {
+      handleRegister(e)
+    }
+  }
+
+  // 已登入顯示
+  if (user) {
+    return (
+      <>
+        <section style={{ padding: '40px 0', background: '#FAF8F5' }}>
+          <div style={{ maxWidth: '450px', margin: '0 auto', padding: '0 20px' }}>
+            <h1 style={{ fontSize: '32px', textAlign: 'center' }}>會員<span style={{ color: '#A68B6A' }}>中心</span></h1>
+          </div>
+        </section>
+
+        <section style={{ padding: '40px 20px' }}>
+          <div style={{ maxWidth: '450px', margin: '0 auto' }}>
+            {/* 用戶卡片 */}
+            <div style={{ 
+              background: '#fff', 
+              borderRadius: '16px', 
+              padding: '30px',
+              boxShadow: '0 2px 20px rgba(0,0,0,0.1)',
+              marginBottom: '20px'
+            }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ 
+                  width: '80px', 
+                  height: '80px', 
+                  borderRadius: '50%', 
+                  background: 'linear-gradient(135deg, #A68B6A, #8B7355)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '32px',
+                  color: '#fff',
+                  margin: '0 auto 15px'
+                }}>
+                  {user.name.charAt(0)}
+                </div>
+                <h2 style={{ marginBottom: '5px' }}>{user.name}</h2>
+                <p style={{ color: '#666', fontSize: '14px', marginBottom: '15px' }}>{user.email}</p>
+                <div style={{ 
+                  display: 'inline-block', 
+                  padding: '8px 20px', 
+                  background: '#A68B6A', 
+                  color: '#fff', 
+                  borderRadius: '20px',
+                  fontSize: '14px'
+                }}>
+                  💎 {user.points || 0} 積分
+                </div>
+              </div>
+            </div>
+
+            {/* 功能選單 */}
+            <div style={{ 
+              background: '#fff', 
+              borderRadius: '16px', 
+              overflow: 'hidden',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
+            }}>
+              <Link href="/booking" style={{ display: 'block', padding: '20px', borderBottom: '1px solid #f0f0f0', textDecoration: 'none', color: '#333' }}>
+                📅 我的預約
+              </Link>
+              <Link href="/tickets" style={{ display: 'block', padding: '20px', borderBottom: '1px solid #f0f0f0', textDecoration: 'none', color: '#333' }}>
+                🎫 我的套票
+              </Link>
+              <Link href="/products" style={{ display: 'block', padding: '20px', borderBottom: '1px solid #f0f0f0', textDecoration: 'none', color: '#333' }}>
+                🛍️ 產品商店
+              </Link>
+              <div style={{ padding: '20px', borderBottom: '1px solid #f0f0f0' }}>
+                🎁 積分記錄
+              </div>
+              <div style={{ padding: '20px' }}>
+                ⚙️ 帳戶設定
+              </div>
+            </div>
+
+            <button 
+              onClick={handleLogout}
+              style={{
+                width: '100%',
+                marginTop: '20px',
+                padding: '14px',
+                background: '#fff',
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '16px',
+                color: '#666'
+              }}
+            >
+              登出
+            </button>
+          </div>
+        </section>
+      </>
+    )
+  }
+
+  // 登入/註冊表單
   return (
     <>
       <section style={{ padding: '40px 0', background: '#FAF8F5' }}>
-        <div className="container">
+        <div style={{ maxWidth: '450px', margin: '0 auto', padding: '0 20px' }}>
           <h1 style={{ fontSize: '32px', textAlign: 'center' }}>{isLogin ? '登入' : '註冊'}<span style={{ color: '#A68B6A' }}>帳戶</span></h1>
         </div>
       </section>
 
-      <section className="section">
+      <section style={{ padding: '40px 20px' }}>
         <div style={{ 
           maxWidth: '450px', 
           margin: '0 auto', 
@@ -38,6 +221,35 @@ export default function Login() {
           padding: '40px',
           boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
         }}>
+          {/* 成功訊息 */}
+          {success && (
+            <div style={{ 
+              padding: '15px', 
+              background: '#dcfce7', 
+              color: '#16a34a', 
+              borderRadius: '8px', 
+              marginBottom: '20px',
+              textAlign: 'center'
+            }}>
+              {success}
+            </div>
+          )}
+
+          {/* 錯誤訊息 */}
+          {error && (
+            <div style={{ 
+              padding: '15px', 
+              background: '#fee2e2', 
+              color: '#dc2626', 
+              borderRadius: '8px', 
+              marginBottom: '20px',
+              textAlign: 'center'
+            }}>
+              {error}
+            </div>
+          )}
+
+          {/* Toggle */}
           <div style={{ 
             display: 'flex', 
             marginBottom: '30px',
@@ -46,7 +258,7 @@ export default function Login() {
             border: '1px solid #ddd'
           }}>
             <button
-              onClick={() => setIsLogin(true)}
+              onClick={() => { setIsLogin(true); setError(''); setSuccess('') }}
               style={{
                 flex: 1,
                 padding: '12px',
@@ -60,7 +272,7 @@ export default function Login() {
               登入
             </button>
             <button
-              onClick={() => setIsLogin(false)}
+              onClick={() => { setIsLogin(false); setError(''); setSuccess('') }}
               style={{
                 flex: 1,
                 padding: '12px',
@@ -79,7 +291,7 @@ export default function Login() {
             {!isLogin && (
               <div style={{ marginBottom: '20px' }}>
                 <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, fontSize: '14px' }}>
-                  姓名
+                  姓名 *
                 </label>
                 <input
                   type="text"
@@ -100,7 +312,7 @@ export default function Login() {
 
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, fontSize: '14px' }}>
-                電話
+                電話 *
               </label>
               <input
                 type="tel"
@@ -120,7 +332,7 @@ export default function Login() {
 
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, fontSize: '14px' }}>
-                電郵
+                電郵 *
               </label>
               <input
                 type="email"
@@ -140,7 +352,7 @@ export default function Login() {
 
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, fontSize: '14px' }}>
-                密碼
+                密碼 *
               </label>
               <input
                 type="password"
@@ -168,7 +380,6 @@ export default function Login() {
                 <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
                   <input type="checkbox" /> 記住登入
                 </label>
-                <a href="#" style={{ color: '#A68B6A' }}>忘記密碼？</a>
               </div>
             )}
 
@@ -192,53 +403,6 @@ export default function Login() {
             </button>
           </form>
 
-          <div style={{ marginTop: '30px' }}>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              marginBottom: '20px' 
-            }}>
-              <div style={{ flex: 1, height: '1px', background: '#ddd' }}></div>
-              <span style={{ padding: '0 15px', color: '#999', fontSize: '14px' }}>或</span>
-              <div style={{ flex: 1, height: '1px', background: '#ddd' }}></div>
-            </div>
-
-            <button
-              style={{
-                width: '100%',
-                padding: '12px',
-                background: '#fff',
-                border: '1px solid #ddd',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '10px',
-                marginBottom: '10px'
-              }}
-            >
-              📱 使用電話號碼登入
-            </button>
-
-            <button
-              style={{
-                width: '100%',
-                padding: '12px',
-                background: '#fff',
-                border: '1px solid #ddd',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '10px'
-              }}
-            >
-              💬 WeChat 登入
-            </button>
-          </div>
-
           {!isLogin && (
             <p style={{ 
               marginTop: '20px', 
@@ -254,6 +418,7 @@ export default function Login() {
           )}
         </div>
 
+        {/* 會員專享 */}
         <div style={{ 
           maxWidth: '450px', 
           margin: '40px auto',
