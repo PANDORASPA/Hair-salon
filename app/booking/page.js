@@ -101,13 +101,20 @@ export default function Booking() {
 
   // Check if staff is working on selected date
   const isStaffWorking = (staff, date, time) => {
-    if (!staff || !staff.schedule) return true
+    if (!staff) return false
+    if (!staff.schedule) return true // No schedule = available
     
-    const dateKey = formatDateKey(date, currentYear, currentMonth)
-    const daySchedule = staff.schedule[dateKey]
+    // Get day of week (0 = Sunday, 6 = Saturday)
+    const dayOfWeek = new Date(currentYear, currentMonth, date).getDay().toString()
     
-    if (staff.daysOff?.includes(dateKey)) return false
+    // Check if it's a weekly day off
+    if (staff.daysOff?.includes(dayOfWeek)) return false
+    
+    // Get weekly schedule for this day of week
+    const daySchedule = staff.schedule[dayOfWeek]
     if (!daySchedule?.start || !daySchedule?.end) return false
+    
+    // Check if time is within working hours
     if (time && (time < daySchedule.start || time > daySchedule.end)) return false
     
     return true
