@@ -1,21 +1,50 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { supabase } from '../lib/supabase'
 
 export default function Home() {
   const [currentSlide, setCurrentSlide] = useState(0)
+  const [services, setServices] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchServices() {
+      const { data } = await supabase
+        .from('services')
+        .select('*')
+        .eq('enabled', true)
+        .order('sort_order')
+        .limit(3)
+      
+      if (data) {
+        setServices(data.map(s => ({
+          id: s.id,
+          name: s.name,
+          price: s.price,
+          time: s.time ? `${s.time}分` : '60分',
+          img: getServiceEmoji(s.name)
+        })))
+      }
+      setLoading(false)
+    }
+    fetchServices()
+  }, [])
+
+  const getServiceEmoji = (name) => {
+    if (name.includes('剪')) return '✂️'
+    if (name.includes('染')) return '🎨'
+    if (name.includes('燙')) return '💇'
+    if (name.includes('護')) return '💆'
+    if (name.includes('头皮')) return '🧴'
+    return '✂️'
+  }
 
   const slides = [
     { title: 'VIVA HAIR', desc: '為您打造自然舒適的完美造型', bg: '#FAF8F5' },
     { title: '新客優惠', desc: '首次預約8折', bg: '#F5F0E8', badge: '限時' },
     { title: '會員積分', desc: '消費$1 = 1積分', bg: '#E8E0D5', link: '/login', linkText: '加入會員' },
-  ]
-
-  const services = [
-    { id: 1, name: '剪髮', price: 280, time: '60分', img: '✂️' },
-    { id: 2, name: '染髮', price: 680, time: '120分', img: '🎨' },
-    { id: 3, name: '燙髮', price: 880, time: '150分', img: '💇' },
   ]
 
   const tickets = [
@@ -25,7 +54,7 @@ export default function Home() {
 
   return (
     <>
-      {/* Hero Banner - Mobile Optimized */}
+      {/* Hero Banner */}
       <section style={{ position: 'relative', overflow: 'hidden', minHeight: '65vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: slides[currentSlide].bg, padding: '20px' }}>
         <div style={{ textAlign: 'center', zIndex: 1 }}>
           {slides[currentSlide].badge && (
@@ -52,27 +81,33 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Services - Mobile Optimized */}
+      {/* Services */}
       <section style={{ padding: '32px 16px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <h2 style={{ textAlign: 'center', fontSize: '24px', marginBottom: '20px', color: '#3D3D3D' }}>熱門服務</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px' }}>
-            {services.map((service) => (
-              <div key={service.id} style={{ background: '#fff', border: '1px solid #E8E0D5', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-                <div style={{ height: '70px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', background: '#FAF8F5', borderRadius: '8px', marginBottom: '12px' }}>{service.img}</div>
-                <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '6px' }}>{service.name}</h3>
-                <p style={{ color: '#666', fontSize: '13px', marginBottom: '10px' }}>{service.time}</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <span style={{ fontSize: '20px', fontWeight: 700, color: '#A68B6A' }}>${service.price}</span>
-                  <Link href="/booking" style={{ display: 'block', padding: '10px', background: 'linear-gradient(135deg, #A68B6A, #8B7355)', color: '#fff', borderRadius: '6px', textDecoration: 'none', fontWeight: 600, fontSize: '13px' }}>預約</Link>
+          {loading ? (
+            <p style={{ textAlign: 'center', color: '#999' }}>載入中...</p>
+          ) : services.length === 0 ? (
+            <p style={{ textAlign: 'center', color: '#999' }}>暫時沒有服務</p>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px' }}>
+              {services.map((service) => (
+                <div key={service.id} style={{ background: '#fff', border: '1px solid #E8E0D5', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+                  <div style={{ height: '70px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', background: '#FAF8F5', borderRadius: '8px', marginBottom: '12px' }}>{service.img}</div>
+                  <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '6px' }}>{service.name}</h3>
+                  <p style={{ color: '#666', fontSize: '13px', marginBottom: '10px' }}>{service.time}</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <span style={{ fontSize: '20px', fontWeight: 700, color: '#A68B6A' }}>${service.price}</span>
+                    <Link href="/booking" style={{ display: 'block', padding: '10px', background: 'linear-gradient(135deg, #A68B6A, #8B7355)', color: '#fff', borderRadius: '6px', textDecoration: 'none', fontWeight: 600, fontSize: '13px' }}>預約</Link>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
-      {/* Tickets - Mobile Optimized */}
+      {/* Tickets */}
       <section style={{ padding: '32px 16px', background: '#FAF8F5' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <h2 style={{ textAlign: 'center', fontSize: '24px', marginBottom: '20px', color: '#3D3D3D' }}>套票優惠</h2>
@@ -93,7 +128,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CTA - Mobile Optimized */}
+      {/* CTA */}
       <section style={{ padding: '32px 16px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', textAlign: 'center' }}>
           <h2 style={{ fontSize: '24px', marginBottom: '12px', color: '#3D3D3D' }}>預約免費咨詢</h2>
