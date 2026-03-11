@@ -92,17 +92,6 @@ export default function Login() {
     setLoading(false)
   }
 
-      if (foundUser) {
-        localStorage.setItem('viva_current_user', JSON.stringify(foundUser))
-        setUser(foundUser)
-        setSuccess('登入成功！')
-      } else {
-        setError('電郵或密碼錯誤，請重試')
-      }
-      setLoading(false)
-    }, 1000)
-  }
-
   const handleLogout = () => {
     localStorage.removeItem('viva_current_user')
     setUser(null)
