@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { supabase } from '../../lib/supabase'
 
 export default function Login() {
   const [isLogin, setIsLogin] = useState(true)
@@ -22,61 +23,74 @@ export default function Login() {
     }
   }, [])
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault()
     setLoading(true)
     setError('')
     setSuccess('')
 
-    // 模擬網絡延遲
-    setTimeout(() => {
-      // 獲取現有用戶
-      const users = JSON.parse(localStorage.getItem('viva_users') || '[]')
-      
-      // 檢查email是否已註冊
-      if (users.find(u => u.email === email)) {
-        setError('此電郵已註冊，請直接登入')
-        setLoading(false)
-        return
-      }
+    // 檢查email是否已註冊
+    const { data: existingUsers } = await supabase
+      .from('users')
+      .select('email')
+      .eq('email', email)
 
-      // 檢查電話是否已註冊
-      if (users.find(u => u.phone === phone)) {
-        setError('此電話號碼已註冊')
-        setLoading(false)
-        return
-      }
-
-      // 創建新用戶
-      const newUser = {
-        id: Date.now(),
-        name,
-        phone,
-        email,
-        password,
-        points: 100, // 新用戶送100積分
-        createdAt: new Date().toISOString()
-      }
-
-      users.push(newUser)
-      localStorage.setItem('viva_users', JSON.stringify(users))
-
-      // 自動登入
-      localStorage.setItem('viva_current_user', JSON.stringify(newUser))
-      setUser(newUser)
-      setSuccess('註冊成功！歡迎加入 VIVA HAIR！')
+    if (existingUsers && existingUsers.length > 0) {
+      setError('此電郵已註冊，請直接登入')
       setLoading(false)
-    }, 1000)
+      return
+    }
+
+    // 創建新用戶
+    const newUser = {
+      name,
+      phone,
+      email,
+      password,
+      points: 100,
+      created_at: new Date().toISOString()
+    }
+
+    const { data, error } = await supabase
+      .from('users')
+      .insert([newUser])
+      .select()
+      .single()
+
+    if (error) {
+      setError('註冊失敗，請稍後再試')
+      setLoading(false)
+      return
+    }
+
+    // 自動登入
+    localStorage.setItem('viva_current_user', JSON.stringify(data))
+    setUser(data)
+    setSuccess('註冊成功！歡迎加入 VIVA HAIR！')
+    setLoading(false)
   }
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault()
     setLoading(true)
     setError('')
 
-    setTimeout(() => {
-      const users = JSON.parse(localStorage.getItem('viva_users') || '[]')
-      const foundUser = users.find(u => u.email === email && u.password === password)
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .eq('password', password)
+      .single()
+
+    if (data) {
+      localStorage.setItem('viva_current_user', JSON.stringify(data))
+      setUser(data)
+      setSuccess('登入成功！')
+    } else {
+      setError('電郵或密碼錯誤，請重試')
+    }
+    setLoading(false)
+  }
 
       if (foundUser) {
         localStorage.setItem('viva_current_user', JSON.stringify(foundUser))
