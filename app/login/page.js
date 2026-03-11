@@ -1,180 +1,309 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+import Link from 'next/link'
 
 export default function Login() {
   const [isLogin, setIsLogin] = useState(true)
-  const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
-  const [birthday, setBirthday] = useState('')
+  const [phone, setPhone] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const router = useRouter()
 
-  // Check if already logged in
-  useEffect(() => {
-    const member = localStorage.getItem('VIVA_member')
-    if (member) {
-      router.push('/member')
-    }
-  }, [router])
-
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault()
     setLoading(true)
-    setError('')
-
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    if (isLogin) {
-      // Login
-      const members = JSON.parse(localStorage.getItem('VIVA_members') || '[]')
-      const member = members.find(m => m.phone === phone && m.password === password)
-      
-      if (member) {
-        localStorage.setItem('VIVA_member', JSON.stringify(member))
-        router.push('/member')
-      } else {
-        setError('電話或密碼錯誤')
-      }
-    } else {
-      // Register
-      const members = JSON.parse(localStorage.getItem('VIVA_members') || '[]')
-      
-      if (members.find(m => m.phone === phone)) {
-        setError('此電話已經註冊')
-        setLoading(false)
-        return
-      }
-
-      const newMember = {
-        id: 'MB' + Date.now().toString().slice(-6),
-        name,
-        phone,
-        birthday,
-        password,
-        points: 0,
-        tickets: [],
-        bookings: [],
-        createdAt: new Date().toISOString()
-      }
-
-      members.push(newMember)
-      localStorage.setItem('VIVA_members', JSON.stringify(members))
-      localStorage.setItem('VIVA_member', JSON.stringify(newMember))
-      router.push('/member')
-    }
-
-    setLoading(false)
-  }
-
-  const isBirthday = () => {
-    if (!birthday) return false
-    const today = new Date()
-    const bday = new Date(birthday)
-    return today.getMonth() === bday.getMonth() && today.getDate() === bday.getDate()
+    
+    setTimeout(() => {
+      setLoading(false)
+      alert(isLogin ? '登入成功！' : '註冊成功，歡迎加入 VIVA HAIR！')
+    }, 1000)
   }
 
   return (
-    <div style={{ paddingTop: '80px', minHeight: '100vh', background: '#FAF8F5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ width: '100%', maxWidth: '400px', padding: '20px' }}>
-        <div style={{ background: '#fff', borderRadius: '20px', padding: '32px', border: '1px solid #E8E0D5' }}>
-          <h1 style={{ fontSize: '28px', textAlign: 'center', marginBottom: '8px', color: '#3D3D3D' }}>
-            VIVA <span style={{ color: '#A68B6A' }}>HAIR</span>
-          </h1>
-          <p style={{ textAlign: 'center', color: '#8A8A8A', marginBottom: '30px' }}>
-            {isLogin ? '會員登入' : '會員註冊'}
-          </p>
+    <>
+      <section style={{ padding: '40px 0', background: '#FAF8F5' }}>
+        <div className="container">
+          <h1 style={{ fontSize: '32px', textAlign: 'center' }}>{isLogin ? '登入' : '註冊'}<span style={{ color: '#A68B6A' }}>帳戶</span></h1>
+        </div>
+      </section>
 
-          {error && (
-            <div style={{ background: '#ffebee', color: '#F44336', padding: '12px', borderRadius: '8px', marginBottom: '16px', fontSize: '14px', textAlign: 'center' }}>
-              {error}
-            </div>
-          )}
+      <section className="section">
+        <div style={{ 
+          maxWidth: '450px', 
+          margin: '0 auto', 
+          background: '#fff', 
+          borderRadius: '12px',
+          padding: '40px',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            marginBottom: '30px',
+            borderRadius: '8px',
+            overflow: 'hidden',
+            border: '1px solid #ddd'
+          }}>
+            <button
+              onClick={() => setIsLogin(true)}
+              style={{
+                flex: 1,
+                padding: '12px',
+                background: isLogin ? '#A68B6A' : '#fff',
+                color: isLogin ? '#fff' : '#666',
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: 600
+              }}
+            >
+              登入
+            </button>
+            <button
+              onClick={() => setIsLogin(false)}
+              style={{
+                flex: 1,
+                padding: '12px',
+                background: !isLogin ? '#A68B6A' : '#fff',
+                color: !isLogin ? '#fff' : '#666',
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: 600
+              }}
+            >
+              註冊
+            </button>
+          </div>
 
           <form onSubmit={handleSubmit}>
             {!isLogin && (
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: '#6B6B6B' }}>姓名</label>
-                <input 
-                  type="text" 
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, fontSize: '14px' }}>
+                  姓名
+                </label>
+                <input
+                  type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="您的姓名"
                   required={!isLogin}
-                  style={{ width: '100%', padding: '12px', border: '1px solid #E8E0D5', borderRadius: '8px', fontSize: '14px' }}
+                  placeholder="請輸入您的姓名"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #ddd',
+                    borderRadius: '8px',
+                    fontSize: '14px'
+                  }}
                 />
               </div>
             )}
-            
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: '#6B6B6B' }}>電話</label>
-              <input 
-                type="tel" 
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, fontSize: '14px' }}>
+                電話
+              </label>
+              <input
+                type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="9/8/7/6 開頭"
-                required
-                style={{ width: '100%', padding: '12px', border: '1px solid #E8E0D5', borderRadius: '8px', fontSize: '14px' }}
+                required={!isLogin}
+                placeholder="請輸入電話號碼"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '14px'
+                }}
               />
             </div>
 
-            {!isLogin && (
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: '#6B6B6B' }}>
-                  生日 🎂
-                  <span style={{ color: '#8A8A8A', fontSize: '12px', marginLeft: '8px' }}>(獲得生日優惠)</span>
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, fontSize: '14px' }}>
+                電郵
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="請輸入電郵地址"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, fontSize: '14px' }}>
+                密碼
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                placeholder="請輸入密碼"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+
+            {isLogin && (
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                marginBottom: '20px',
+                fontSize: '14px'
+              }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                  <input type="checkbox" /> 記住登入
                 </label>
-                <input 
-                  type="date" 
-                  value={birthday}
-                  onChange={(e) => setBirthday(e.target.value)}
-                  style={{ width: '100%', padding: '12px', border: '1px solid #E8E0D5', borderRadius: '8px', fontSize: '14px' }}
-                />
+                <a href="#" style={{ color: '#A68B6A' }}>忘記密碼？</a>
               </div>
             )}
 
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: '#6B6B6B' }}>密碼</label>
-              <input 
-                type="password" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="密碼"
-                required
-                style={{ width: '100%', padding: '12px', border: '1px solid #E8E0D5', borderRadius: '8px', fontSize: '14px' }}
-              />
-            </div>
-
-            <button 
+            <button
               type="submit"
               disabled={loading}
-              style={{ width: '100%', padding: '14px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '25px', fontSize: '15px', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}
+              style={{
+                width: '100%',
+                padding: '14px',
+                background: '#A68B6A',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                fontSize: '16px',
+                fontWeight: 600,
+                opacity: loading ? 0.7 : 1
+              }}
             >
               {loading ? '處理中...' : (isLogin ? '登入' : '註冊')}
             </button>
           </form>
 
-          <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '14px', color: '#6B6B6B' }}>
-            {isLogin ? '未有帳戶？' : '已有帳戶？'}
-            <span 
-              onClick={() => { setIsLogin(!isLogin); setError('') }}
-              style={{ color: '#A68B6A', cursor: 'pointer', marginLeft: '8px', fontWeight: '500' }}
+          <div style={{ marginTop: '30px' }}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              marginBottom: '20px' 
+            }}>
+              <div style={{ flex: 1, height: '1px', background: '#ddd' }}></div>
+              <span style={{ padding: '0 15px', color: '#999', fontSize: '14px' }}>或</span>
+              <div style={{ flex: 1, height: '1px', background: '#ddd' }}></div>
+            </div>
+
+            <button
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: '#fff',
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                marginBottom: '10px'
+              }}
             >
-              {isLogin ? '立即註冊' : '立即登入'}
-            </span>
-          </p>
+              📱 使用電話號碼登入
+            </button>
+
+            <button
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: '#fff',
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px'
+              }}
+            >
+              💬 WeChat 登入
+            </button>
+          </div>
+
+          {!isLogin && (
+            <p style={{ 
+              marginTop: '20px', 
+              fontSize: '12px', 
+              color: '#999',
+              textAlign: 'center',
+              lineHeight: 1.6
+            }}>
+              註冊即表示同意我哋既
+              <a href="#" style={{ color: '#A68B6A' }}> 服務條款</a>同
+              <a href="#" style={{ color: '#A68B6A' }}> 隱私政策</a>
+            </p>
+          )}
         </div>
 
-        <p style={{ textAlign: 'center', marginTop: '20px' }}>
-          <a href="/" style={{ color: '#8A8A8A', textDecoration: 'none', fontSize: '14px' }}>
-            ← 返回首頁
-          </a>
-        </p>
-      </div>
-    </div>
+        <div style={{ 
+          maxWidth: '450px', 
+          margin: '40px auto',
+          textAlign: 'center' 
+        }}>
+          <h3 style={{ marginBottom: '20px' }}>會員專享</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
+            <div style={{ 
+              background: '#fff', 
+              padding: '20px', 
+              borderRadius: '8px',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
+            }}>
+              <div style={{ fontSize: '30px', marginBottom: '10px' }}>🎫</div>
+              <div style={{ fontWeight: 600, marginBottom: '5px' }}>套票9折</div>
+              <div style={{ fontSize: '12px', color: '#666' }}>購買套票優惠</div>
+            </div>
+            <div style={{ 
+              background: '#fff', 
+              padding: '20px', 
+              borderRadius: '8px',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
+            }}>
+              <div style={{ fontSize: '30px', marginBottom: '10px' }}>🎁</div>
+              <div style={{ fontWeight: 600, marginBottom: '5px' }}>積分換禮</div>
+              <div style={{ fontSize: '12px', color: '#666' }}>積分換產品</div>
+            </div>
+            <div style={{ 
+              background: '#fff', 
+              padding: '20px', 
+              borderRadius: '8px',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
+            }}>
+              <div style={{ fontSize: '30px', marginBottom: '10px' }}>📅</div>
+              <div style={{ fontWeight: 600, marginBottom: '5px' }}>優先預約</div>
+              <div style={{ fontSize: '12px', color: '#666' }}>搶先預約心水時段</div>
+            </div>
+            <div style={{ 
+              background: '#fff', 
+              padding: '20px', 
+              borderRadius: '8px',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
+            }}>
+              <div style={{ fontSize: '30px', marginBottom: '10px' }}>💰</div>
+              <div style={{ fontWeight: 600, marginBottom: '5px' }}>產品9折</div>
+              <div style={{ fontSize: '12px', color: '#666' }}>會員專享優惠</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </>
   )
 }
