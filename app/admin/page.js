@@ -339,10 +339,12 @@ export default function Admin() {
 
         {activeTab === 'services' && <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}><h3>✂️ 服務</h3><button onClick={addService} style={{ padding: '6px 12px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '6px' }}>+ 新增</button></div>
-          {services.map((s, i) => <div key={s.id} style={{ display: 'flex', gap: '8px', alignItems: 'center', padding: '10px', background: '#fff', borderRadius: '8px', marginBottom: '8px' }}>
+          {services.map((s, i) => <div key={s.id} style={{ display: 'flex', gap: '8px', alignItems: 'center', padding: '10px', background: '#fff', borderRadius: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
             <input type="checkbox" checked={s.enabled} onChange={e => { const n = [...services]; n[i].enabled = e.target.checked; setServices(n) }} />
-            <input type="text" value={s.name} onChange={e => { const n = [...services]; n[i].name = e.target.value; setServices(n) }} style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
-            <input type="number" value={s.price} onChange={e => { const n = [...services]; n[i].price = parseInt(e.target.value); setServices(n) }} style={{ width: '60px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
+            <input type="text" value={s.name} onChange={e => { const n = [...services]; n[i].name = e.target.value; setServices(n) }} placeholder="服務名稱" style={{ flex: '1 1 120px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
+            <input type="number" value={s.price} onChange={e => { const n = [...services]; n[i].price = parseInt(e.target.value); setServices(n) }} placeholder="價格" style={{ width: '70px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
+            <input type="number" value={s.time || 60} onChange={e => { const n = [...services]; n[i].time = parseInt(e.target.value); setServices(n) }} placeholder="分鐘" style={{ width: '60px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
+            <span style={{ fontSize: '12px', color: '#666' }}>分鐘</span>
           </div>)}
           <button onClick={saveServices} disabled={saving} style={{ width: '100%', padding: '12px', background: saving ? '#ccc' : '#A68B6A', color: '#fff', border: 'none', borderRadius: '8px' }}>{saving ? '保存中...' : '保存'}</button>
         </div>}
