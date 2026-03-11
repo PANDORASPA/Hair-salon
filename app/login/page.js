@@ -26,16 +26,16 @@ export default function Login() {
     if (currentUser) {
       const userData = JSON.parse(currentUser)
       setUser(userData)
-      await fetchUserData(userData.id)
+      await fetchUserData(userData.id, userData.phone)
     }
   }
 
-  const fetchUserData = async (userId) => {
+  const fetchUserData = async (userId, userPhone) => {
     // Fetch user's bookings
     const { data: bookings } = await supabase
       .from('bookings')
       .select('*')
-      .eq('phone', user?.phone)
+      .eq('phone', userPhone)
       .order('created_at', { ascending: false })
     
     if (bookings) setUserBookings(bookings)
@@ -116,7 +116,7 @@ export default function Login() {
 
     localStorage.setItem('viva_current_user', JSON.stringify(data))
     setUser(data)
-    await fetchUserData(data.id)
+    await fetchUserData(data.id, data.phone)
     setLoading(false)
   }
 
