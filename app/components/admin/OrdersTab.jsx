@@ -1,62 +1,140 @@
 'use client'
+import { useState, useEffect } from 'react'
+import { supabase } from '../../../lib/supabase'
+import { toast } from 'react-hot-toast'
 
-// Orders Tab Component
-export default function OrdersTab({ orders, orderStatusFilter, setOrderStatusFilter, searchTermOrder, setSearchTermOrder }) {
+export default function OrdersTab({ orders: initialOrders }) {
+  const [orders, setOrders] = useState(initialOrders)
+  const [selectedOrder, setSelectedOrder] = useState(null)
+
+  useEffect(() => {
+    setOrders(initialOrders)
+  }, [initialOrders])
+
+  const updateOrderStatus = async (id, status) => {
+    const { error } = await supabase.from('orders').update({ status }).eq('id', id)
+    if (error) {
+      toast.error('更新失敗')
+      return
+    }
+    setOrders(orders.map(o => o.id === id ? { ...o, status } : o))
+    toast.success('狀態已更新')
+  }
+
   return (
     <div>
-      <div style={{ marginBottom: '16px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-        <input
-          type="text"
-          placeholder="搜尋訂單..."
-          value={searchTermOrder}
-          onChange={(e) => setSearchTermOrder(e.target.value)}
-          style={{ flex: 1, padding: '10px', border: '1px solid #ddd', borderRadius: '8px', minWidth: '200px' }}
-        />
-        <select value={orderStatusFilter} onChange={(e) => setOrderStatusFilter(e.target.value)} style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '8px' }}>
-          <option value="all">全部狀態</option>
-          <option value="pending">待處理</option>
-          <option value="paid">已付款</option>
-          <option value="shipped">已寄出</option>
-          <option value="completed">已完成</option>
-          <option value="cancelled">已取消</option>
-        </select>
+      <div className="admin-card" style={{ overflow: 'hidden' }}>
+        <div className="hide-scrollbar" style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', minWidth: '600px' }}>
+            <thead>
+              <tr style={{ background: '#FAF8F5', borderBottom: '1px solid var(--gray)' }}>
+                <th style={{ padding: '16px 12px', textAlign: 'left', fontWeight: 700, color: 'var(--text-light)' }}>日期</th>
+                <th style={{ padding: '16px 12px', textAlign: 'left', fontWeight: 700, color: 'var(--text-light)' }}>客戶資訊</th>
+                <th style={{ padding: '16px 12px', textAlign: 'left', fontWeight: 700, color: 'var(--text-light)' }}>訂單金額</th>
+                <th style={{ padding: '16px 12px', textAlign: 'left', fontWeight: 700, color: 'var(--text-light)' }}>付款 / 配送</th>
+                <th style={{ padding: '16px 12px', textAlign: 'left', fontWeight: 700, color: 'var(--text-light)' }}>目前狀態</th>
+                <th style={{ padding: '16px 12px', textAlign: 'center', fontWeight: 700, color: 'var(--text-light)' }}>管理</th>
+              </tr>
+            </thead>
+            <tbody>
+              {orders.length === 0 ? (
+                <tr><td colSpan="6" style={{ padding: '60px', textAlign: 'center', color: 'var(--text-light)' }}>📭 暫無訂單記錄</td></tr>
+              ) : (
+                orders.map(o => (
+                  <tr key={o.id} className="admin-table-row" style={{ borderBottom: '1px solid #f9f9f9' }}>
+                    <td style={{ padding: '14px 12px' }}>{new Date(o.created_at).toLocaleDateString()}</td>
+                    <td style={{ padding: '14px 12px' }}>
+                      <div style={{ fontWeight: 600 }}>{o.user_name}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-light)' }}>ID: {o.id.toString().slice(0,8)}</div>
+                    </td>
+                    <td style={{ padding: '14px 12px', fontWeight: 700, color: 'var(--primary)' }}>${o.total}</td>
+                    <td style={{ padding: '14px 12px' }}>
+                      <div style={{ fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' }}>
+                        <span>💳</span> {o.payment}
+                      </div>
+                      <div style={{ fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>🚚</span> {o.delivery}
+                      </div>
+                    </td>
+                    <td style={{ padding: '14px 12px' }}>
+                      <span className={`badge ${
+                        o.status === 'pending' ? '' : 
+                        o.status === 'paid' ? 'badge-success' : 
+                        o.status === 'shipped' ? 'badge-success' : 
+                        'badge-outline'
+                      }`} style={{ 
+                        background: o.status === 'pending' ? '#fef3c7' : undefined,
+                        color: o.status === 'pending' ? '#d97706' : undefined,
+                        borderColor: o.status === 'cancelled' ? '#fee2e2' : undefined,
+                      }}>
+                        {o.status === 'pending' ? '待處理' : o.status === 'paid' ? '已付款' : o.status === 'shipped' ? '已發貨' : '已取消'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '14px 12px', textAlign: 'center' }}>
+                      <button 
+                        onClick={() => setSelectedOrder(o)} 
+                        className="btn-interactive"
+                        style={{ padding: '6px 12px', background: '#f5f5f5', border: '1px solid var(--gray)', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
+                      >
+                        詳情
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', borderRadius: '10px', overflow: 'hidden' }}>
-          <thead style={{ background: '#f5f5f5' }}>
-            <tr>
-              <th style={{ padding: '12px', textAlign: 'left', fontSize: '13px' }}>訂單編號</th>
-              <th style={{ padding: '12px', textAlign: 'left', fontSize: '13px' }}>客戶</th>
-              <th style={{ padding: '12px', textAlign: 'left', fontSize: '13px' }}>產品</th>
-              <th style={{ padding: '12px', textAlign: 'left', fontSize: '13px' }}>數量</th>
-              <th style={{ padding: '12px', textAlign: 'left', fontSize: '13px' }}>金額</th>
-              <th style={{ padding: '12px', textAlign: 'left', fontSize: '13px' }}>狀態</th>
-              <th style={{ padding: '12px', textAlign: 'left', fontSize: '13px' }}>日期</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders
-              .filter(o => orderStatusFilter === 'all' || o.status === orderStatusFilter)
-              .filter(o => !searchTermOrder || o.name?.includes(searchTermOrder) || o.order_ref?.includes(searchTermOrder))
-              .slice(0, 50)
-              .map(o => (
-                <tr key={o.id} style={{ borderTop: '1px solid #f0f0f0' }}>
-                  <td style={{ padding: '12px', fontSize: '13px' }}>{o.order_ref}</td>
-                  <td style={{ padding: '12px', fontSize: '13px' }}>{o.name}<br/><span style={{ color: '#999', fontSize: '11px' }}>{o.phone}</span></td>
-                  <td style={{ padding: '12px', fontSize: '13px' }}>{o.product_name}</td>
-                  <td style={{ padding: '12px', fontSize: '13px' }}>{o.quantity}</td>
-                  <td style={{ padding: '12px', fontSize: '13px' }}>${o.total}</td>
-                  <td style={{ padding: '12px', fontSize: '13px' }}>
-                    <span style={{ padding: '4px 8px', borderRadius: '4px', fontSize: '11px', background: o.status === 'paid' ? '#dcfce7' : o.status === 'pending' ? '#fef3c7' : o.status === 'shipped' ? '#dbeafe' : o.status === 'completed' ? '#dcfce7' : '#fee2e2', color: o.status === 'paid' ? '#16a34a' : o.status === 'pending' ? '#d97706' : o.status === 'shipped' ? '#2563eb' : o.status === 'completed' ? '#16a34a' : '#dc2626' }}>
-                      {o.status === 'pending' ? '待處理' : o.status === 'paid' ? '已付款' : o.status === 'shipped' ? '已寄出' : o.status === 'completed' ? '已完成' : '已取消'}
-                    </span>
-                  </td>
-                  <td style={{ padding: '12px', fontSize: '13px' }}>{o.created_at?.split('T')[0]}</td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
-      </div>
+
+      {selectedOrder && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px', backdropFilter: 'blur(4px)' }}>
+          <div className="admin-card" style={{ width: '100%', maxWidth: '500px', padding: '30px', position: 'relative' }}>
+            <button 
+              onClick={() => setSelectedOrder(null)} 
+              style={{ position: 'absolute', top: '20px', right: '20px', background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#999' }}
+            >
+              ✕
+            </button>
+            <h3 style={{ marginBottom: '20px', fontSize: '18px' }}>訂單詳細資訊</h3>
+            
+            <div style={{ display: 'grid', gap: '16px', marginBottom: '24px' }}>
+              <div style={{ background: '#f9fafb', padding: '16px', borderRadius: '12px' }}>
+                <div style={{ marginBottom: '12px', fontSize: '14px' }}>
+                  <strong style={{ display: 'block', marginBottom: '4px', color: 'var(--text-light)' }}>購買內容</strong>
+                  <div style={{ lineHeight: 1.5 }}>{selectedOrder.items}</div>
+                </div>
+                <div style={{ marginBottom: '12px', fontSize: '14px' }}>
+                  <strong style={{ display: 'block', marginBottom: '4px', color: 'var(--text-light)' }}>配送地址</strong>
+                  <div>{selectedOrder.address || '門市自取'}</div>
+                </div>
+                <div style={{ fontSize: '14px' }}>
+                  <strong style={{ display: 'block', marginBottom: '4px', color: 'var(--text-light)' }}>更改訂單狀態</strong>
+                  <select 
+                    value={selectedOrder.status} 
+                    onChange={(e) => updateOrderStatus(selectedOrder.id, e.target.value)}
+                    className="btn-interactive"
+                    style={{ marginTop: '4px' }}
+                  >
+                    <option value="pending">待處理</option>
+                    <option value="paid">已付款</option>
+                    <option value="shipped">已發貨</option>
+                    <option value="cancelled">已取消</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <button 
+              onClick={() => setSelectedOrder(null)} 
+              className="btn btn-interactive" 
+              style={{ width: '100%' }}
+            >
+              完成並關閉
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
