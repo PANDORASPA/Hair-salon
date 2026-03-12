@@ -16,6 +16,7 @@ export default function Admin() {
   const [bookings, setBookings] = useState([])
   const [orders, setOrders] = useState([])
   const [services, setServices] = useState([])
+  const [servicePackages, setServicePackages] = useState([])
   const [products, setProducts] = useState([])
   const [tickets, setTickets] = useState([])
   const [staff, setStaff] = useState([])
@@ -37,6 +38,7 @@ export default function Admin() {
     { id: 'orders', name: '🛒' },
     { id: 'products', name: '💄' },
     { id: 'tickets', name: '🎫' },
+    { id: 'packages', name: '💎' },
     { id: 'staff', name: '💇' },
     { id: 'services', name: '✂️' },
     { id: 'coupons', name: '🏷️' },
@@ -57,10 +59,11 @@ export default function Admin() {
 
   const fetchData = async () => {
     setLoading(true)
-    const [b, o, s, p, t, c, u, st] = await Promise.all([
+    const [b, o, s, sp, p, t, c, u, st] = await Promise.all([
       supabase.from('bookings').select('*').order('created_at', { ascending: false }),
       supabase.from('orders').select('*').order('created_at', { ascending: false }),
       supabase.from('services').select('*'),
+      supabase.from('service_packages').select('*'),
       supabase.from('products').select('*'),
       supabase.from('tickets').select('*'),
       supabase.from('coupons').select('*'),
@@ -70,6 +73,7 @@ export default function Admin() {
     if (b.data) setBookings(b.data)
     if (o.data) setOrders(o.data)
     if (s.data) setServices(s.data)
+    if (sp.data) setServicePackages(sp.data.length > 0 ? sp.data : [{ id: 1, name: '剪髮+護理', services: [1,4], price: 580, orig: 660, emoji: '💆', description: '剪髮連護理套餐', enabled: true }])
     if (p.data) setProducts(p.data.length > 0 ? p.data : [{ id: 1, name: 'DS100護髮精華素', category: '護理', price: 680, orig: 880, description: '深層修復受損髮質', emoji: '💆', enabled: true }])
     if (t.data) setTickets(t.data.length > 0 ? t.data : [{ id: 1, name: 'Basic套票', price: 680, orig: 860, times: 2, features: '任何服務適用', emoji: '🎁', enabled: true }])
     if (c.data) setCoupons(c.data)
@@ -202,6 +206,18 @@ export default function Admin() {
   const addTicket = () => {
     const newId = Math.max(...tickets.map(t => t.id), 0) + 1
     setTickets([...tickets, { id: newId, name: '新套票', price: 0, orig: 0, times: 2, features: '', emoji: '🎁', enabled: true }])
+  }
+
+  const saveServicePackages = async () => {
+    setSaving(true)
+    for (const p of servicePackages) await supabase.from('service_packages').upsert(p)
+    alert('已保存')
+    setSaving(false)
+  }
+
+  const addServicePackage = () => {
+    const newId = Math.max(...servicePackages.map(p => p.id), 0) + 1
+    setServicePackages([...servicePackages, { id: newId, name: '新套餐', services: [], price: 0, orig: 0, emoji: '💎', description: '', enabled: true }])
   }
 
   const saveCoupons = async () => {
