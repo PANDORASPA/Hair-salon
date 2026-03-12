@@ -4,18 +4,9 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { supabase } from '../../lib/supabase'
 
-const products = [
-  { id: 1, name: 'DS100 護髮精華素', category: '護理', price: 680, orig: 880, desc: '深層修復受損髮質，令頭髮更強韌', img: '💆', popular: true },
-  { id: 2, name: '头皮護理液', category: '護理', price: 280, orig: 380, desc: '有效改善头皮問題，減少脫髮', img: '🧴', popular: true },
-  { id: 3, name: '天然護髮油', category: '護理', price: 180, orig: 220, desc: '滋潤髮絲，防止毛躁', img: '🫒' },
-  { id: 4, name: '專業洗髮水', category: '洗護', price: 150, orig: 180, desc: '温和清潔配方，適合每日使用', img: '🧴' },
-  { id: 5, name: '髮泥定型', category: '造型', price: 120, orig: 150, desc: '強效定型，全日持久', img: '💈' },
-  { id: 6, name: '髮蠟', category: '造型', price: 100, orig: 120, desc: '自然造型，唔會過硬', img: '💇' },
-]
-
-const categories = ['全部', '護理', '洗護', '造型']
-
 export default function Products() {
+  const [products, setProducts] = useState([])
+  const [categories, setCategories] = useState(['全部'])
   const [activeCategory, setActiveCategory] = useState('全部')
   const [cart, setCart] = useState([])
   const [showCart, setShowCart] = useState(false)
@@ -24,8 +15,8 @@ export default function Products() {
   const [user, setUser] = useState(null)
   const [orderPlaced, setOrderPlaced] = useState(false)
   const [orderRef, setOrderRef] = useState('')
+  const [loading, setLoading] = useState(true)
   
-  // 表單資料
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -35,13 +26,26 @@ export default function Products() {
   })
 
   useEffect(() => {
-    // 讀取購物車
+    async function fetchProducts() {
+      setLoading(true)
+      const { data } = await supabase.from('products').select('*').eq('enabled', true).order('id')
+      
+      if (data && data.length > 0) {
+        setProducts(data)
+        const uniqueCategories = [...new Set(data.map(p => p.category).filter(Boolean))]
+        setCategories(['全部', ...uniqueCategories])
+      }
+      setLoading(false)
+    }
+    fetchProducts()
+  }, [])
+
+  useEffect(() => {
     const savedCart = localStorage.getItem('viva_cart')
     if (savedCart) {
       setCart(JSON.parse(savedCart))
     }
     
-    // 讀取用戶
     const currentUser = localStorage.getItem('viva_current_user')
     if (currentUser) {
       const userData = JSON.parse(currentUser)
@@ -55,267 +59,149 @@ export default function Products() {
     : products.filter(p => p.category === activeCategory)
 
   const addToCart = (product) => {
-    const newCart = [...cart, product]
+    const newCart = [...cart, { ...product, cartId: Date.now() }]
     setCart(newCart)
     localStorage.setItem('viva_cart', JSON.stringify(newCart))
   }
 
-  const removeFromCart = (index) => {
-    const newCart = cart.filter((_, i) => i !== index)
+  const removeFromCart = (cartId) => {
+    const newCart = cart.filter(item => item.cartId !== cartId)
     setCart(newCart)
     localStorage.setItem('viva_cart', JSON.stringify(newCart))
   }
 
-  const updateQuantity = (index, change) => {
-    const newCart = [...cart]
-    if (change === 'increase') {
-      newCart.push(newCart[index])
-    } else if (change === 'decrease' && newCart.filter((_, i) => i === index).length > 1) {
-      newCart.splice(index, 1)
-    }
-    setCart(newCart)
-    localStorage.setItem('viva_cart', JSON.stringify(newCart))
-  }
+  const cartTotal = cart.reduce((sum, item) => sum + (item.price || 0), 0)
 
-  const cartTotal = cart.reduce((sum, item) => sum + item.price, 0)
-  const deliveryFee = formData.delivery === '送貨上門' ? 50 : 0
-  const finalTotal = cartTotal + deliveryFee
-
-  const handleCheckout = () => {
-    if (!user) {
-      alert('請先登入會員')
-      window.location.href = '/login'
+  const handleCheckout = async () => {
+    if (!formData.name || !formData.phone) {
+      alert('請填寫姓名和電話')
       return
     }
-    setShowCheckout(true)
-    setCheckoutStep(1)
+
+    setCheckoutStep(2)
   }
 
   const handlePlaceOrder = async () => {
-    // 驗證
     if (!formData.name || !formData.phone) {
-      alert('請填寫聯絡資料')
+      alert('請填寫姓名和電話')
       return
     }
 
-    // 生成訂單編號
-    const ref = 'ORD' + Date.now().toString().slice(-6)
-    setOrderRef(ref)
-
-    // 建立訂單
-    const order = {
-      ref,
-      user_id: user.id,
-      user_name: user.name,
-      items: JSON.stringify(cart),
-      total: finalTotal,
+    const orderItems = cart.map(item => `${item.name} x1`).join(', ')
+    
+    const { data, error } = await supabase.from('orders').insert([{
+      name: formData.name,
+      phone: formData.phone,
+      address: formData.address,
       delivery: formData.delivery,
       payment: formData.payment,
-      address: formData.address || null,
+      product_name: orderItems,
+      total: cartTotal,
       status: 'pending',
       created_at: new Date().toISOString()
-    }
+    }]).select()
 
-    // 保存訂單到 Supabase
-    const { error: orderError } = await supabase
-      .from('orders')
-      .insert([order])
-
-    if (orderError) {
-      console.error('Error creating order:', orderError)
-      alert('訂單失敗，請稍後再試')
+    if (error) {
+      alert('落單失敗: ' + error.message)
       return
     }
 
-    // 更新用戶積分
-    const pointsEarned = Math.floor(finalTotal)
-    const { data: currentUser } = await supabase
-      .from('users')
-      .select('points')
-      .eq('id', user.id)
-      .single()
-
-    if (currentUser) {
-      await supabase
-        .from('users')
-        .update({ points: (currentUser.points || 0) + pointsEarned })
-        .eq('id', user.id)
-    }
-
-    // 清空購物車
-    setCart([])
-    localStorage.setItem('viva_cart', '[]')
-    
+    setOrderRef('ORD' + Date.now().toString().slice(-6))
     setOrderPlaced(true)
+    setCart([])
+    setShowCheckout(false)
+    localStorage.removeItem('viva_cart')
   }
 
-  // 訂單成功
-  if (orderPlaced) {
-    return (
-      <>
-        <section style={{ padding: '60px 20px', minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ textAlign: 'center', maxWidth: '400px' }}>
-            <div style={{ fontSize: '80px', marginBottom: '20px' }}>✅</div>
-            <h2 style={{ color: '#A68B6A', marginBottom: '15px', fontSize: '28px' }}>訂單已送出！</h2>
-            <p style={{ color: '#666', marginBottom: '10px' }}>訂單編號：<strong>{orderRef}</strong></p>
-            <p style={{ color: '#666', marginBottom: '30px' }}>
-              {formData.delivery === '門市取貨' 
-                ? '請於營業時間內到門市取貨' 
-                : '我們會盡快安排送貨'}
-            </p>
-            <div style={{ background: '#FAF8F5', padding: '20px', borderRadius: '12px', marginBottom: '30px' }}>
-              <p style={{ color: '#A68B6A', fontWeight: 600 }}>💎 獲得 {Math.floor(finalTotal)} 積分</p>
-            </div>
-            <Link href="/" style={{ display: 'inline-block', padding: '14px 30px', background: '#A68B6A', color: '#fff', borderRadius: '8px', textDecoration: 'none', fontWeight: 600 }}>
-              返回首頁
-            </Link>
-          </div>
-        </section>
-      </>
-    )
+  if (loading) {
+    return <div style={{ padding: '40px', textAlign: 'center' }}>載入中...</div>
   }
 
   return (
     <>
-      <section style={{ padding: '40px 0', background: '#FAF8F5', textAlign: 'center' }}>
-        <h1 style={{ fontSize: '36px', color: '#3D3D3D' }}>產品<span style={{ color: '#A68B6A' }}>商店</span></h1>
+      <section style={{ padding: '30px 16px', minHeight: 'auto', background: '#FAF8F5' }}>
+        <div style={{ textAlign: 'center' }}>
+          <h1 style={{ fontSize: '28px', color: '#3D3D3D' }}>產品<span style={{ color: '#A68B6A' }}>目錄</span></h1>
+        </div>
       </section>
 
-      {/* Filter */}
-      <div style={{ background: '#fff', padding: '20px 0', borderBottom: '1px solid #eee' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
-          <div style={{ display: 'flex', gap: '10px' }}>
+      <section style={{ padding: '24px 12px' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          {/* Category Tabs */}
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '10px' }}>
             {categories.map(cat => (
-              <button 
-                key={cat} 
-                onClick={() => setActiveCategory(cat)} 
-                style={{ 
-                  padding: '8px 16px', 
-                  background: activeCategory === cat ? '#A68B6A' : 'transparent', 
-                  color: activeCategory === cat ? '#fff' : '#666', 
-                  border: '1px solid #ddd', 
-                  borderRadius: '20px', 
-                  cursor: 'pointer', 
-                  fontSize: '14px' 
-                }}
-              >
+              <button key={cat} onClick={() => setActiveCategory(cat)}
+                style={{ padding: '10px 20px', background: activeCategory === cat ? '#A68B6A' : '#fff', color: activeCategory === cat ? '#fff' : '#666', border: '1px solid #e5e5e5', borderRadius: '20px', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '14px' }}>
                 {cat}
               </button>
             ))}
           </div>
-          <button 
-            onClick={() => setShowCart(true)} 
-            style={{ 
-              padding: '10px 20px', 
-              background: '#A68B6A', 
-              color: '#fff', 
-              border: 'none', 
-              borderRadius: '8px', 
-              cursor: 'pointer', 
-              position: 'relative' 
-            }}
-          >
-            🛒 購物車 ({cart.length})
-          </button>
-        </div>
-      </div>
 
-      {/* Products */}
-      <section style={{ padding: '60px 20px' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '30px' }}>
+          {/* Products Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
             {filteredProducts.map(product => (
-              <div key={product.id} style={{ background: '#fff', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
-                <div style={{ height: '180px', background: 'linear-gradient(135deg, #f5f5f5, #e8e8e8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '60px', position: 'relative' }}>
-                  {product.img}
-                  {product.popular && <span style={{ position: 'absolute', top: '10px', right: '10px', background: '#A68B6A', color: '#fff', padding: '4px 10px', borderRadius: '4px', fontSize: '12px', fontWeight: 600 }}>熱賣</span>}
+              <div key={product.id} style={{ background: '#fff', border: '1px solid #E8E0D5', borderRadius: '12px', overflow: 'hidden' }}>
+                <div style={{ height: '120px', background: 'linear-gradient(135deg, #FAF8F5, #f0ebe3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px' }}>
+                  {product.emoji || '💄'}
                 </div>
-                <div style={{ padding: '20px' }}>
-                  <span style={{ fontSize: '12px', color: '#999', textTransform: 'uppercase' }}>{product.category}</span>
-                  <h3 style={{ fontSize: '18px', margin: '8px 0' }}>{product.name}</h3>
-                  <p style={{ color: '#666', fontSize: '14px', marginBottom: '15px' }}>{product.desc}</p>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ padding: '12px' }}>
+                  <h3 style={{ fontSize: '14px', marginBottom: '6px', fontWeight: 600 }}>{product.name}</h3>
+                  <p style={{ fontSize: '11px', color: '#666', marginBottom: '8px', minHeight: '32px' }}>{product.description}</p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <span style={{ fontSize: '24px', fontWeight: 700, color: '#A68B6A' }}>${product.price}</span>
-                      <span style={{ fontSize: '14px', color: '#999', textDecoration: 'line-through', marginLeft: '10px' }}>${product.orig}</span>
+                      <span style={{ fontSize: '18px', fontWeight: 700, color: '#A68B6A' }}>${product.price}</span>
+                      {product.orig > product.price && <span style={{ fontSize: '12px', color: '#999', textDecoration: 'line-through', marginLeft: '6px' }}>${product.orig}</span>}
                     </div>
-                    <button 
-                      onClick={() => addToCart(product)} 
-                      style={{ 
-                        padding: '10px 20px', 
-                        background: '#A68B6A', 
-                        color: '#fff', 
-                        border: 'none', 
-                        borderRadius: '8px', 
-                        cursor: 'pointer', 
-                        fontWeight: 600 
-                      }}
-                    >
-                      加入
-                    </button>
+                    <button onClick={() => addToCart(product)} style={{ padding: '8px 12px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}>加入</button>
                   </div>
                 </div>
               </div>
             ))}
           </div>
+
+          {filteredProducts.length === 0 && (
+            <p style={{ textAlign: 'center', color: '#999', padding: '40px' }}>暫時沒有產品</p>
+          )}
         </div>
       </section>
 
+      {/* Floating Cart Button */}
+      {cart.length > 0 && (
+        <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 100 }}>
+          <button onClick={() => setShowCart(true)} style={{ padding: '14px 20px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '30px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', fontSize: '14px', fontWeight: 600 }}>
+            🛒 購物車 ({cart.length})
+          </button>
+        </div>
+      )}
+
       {/* Cart Modal */}
       {showCart && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: '#fff', borderRadius: '12px', padding: '30px', width: '90%', maxWidth: '450px', maxHeight: '85vh', overflow: 'auto' }}>
-            <h2 style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              🛒 購物車
-              <button onClick={() => setShowCart(false)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}>✕</button>
-            </h2>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 200 }} onClick={() => setShowCart(false)}>
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '20px', maxWidth: '400px', width: '90%', maxHeight: '80vh', overflow: 'auto' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0 }}>購物車 ({cart.length})</h3>
+              <button onClick={() => setShowCart(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>✕</button>
+            </div>
             
             {cart.length === 0 ? (
-              <p style={{ color: '#666', textAlign: 'center', padding: '40px 0' }}>購物車係空既</p>
+              <p style={{ textAlign: 'center', color: '#999' }}>購物車係空既</p>
             ) : (
               <>
-                {/* 購物車項目 */}
-                <div style={{ marginBottom: '20px' }}>
-                  {cart.map((item, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 0', borderBottom: '1px solid #eee' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ fontSize: '24px' }}>{item.img}</span>
-                        <div>
-                          <div style={{ fontWeight: 600, fontSize: '14px' }}>{item.name}</div>
-                          <div style={{ fontSize: '14px', color: '#A68B6A', fontWeight: 600 }}>${item.price}</div>
-                        </div>
+                <div style={{ marginBottom: '16px' }}>
+                  {cart.map(item => (
+                    <div key={item.cartId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #f0f0f0' }}>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: 500 }}>{item.name}</div>
+                        <div style={{ fontSize: '12px', color: '#A68B6A' }}>${item.price}</div>
                       </div>
-                      <button onClick={() => removeFromCart(i)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '18px' }}>✕</button>
+                      <button onClick={() => removeFromCart(item.cartId)} style={{ background: '#fef2f2', color: '#ef4444', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', fontSize: '12px' }}>刪除</button>
                     </div>
                   ))}
                 </div>
-
-                {/* 總計 */}
-                <div style={{ padding: '20px', background: '#FAF8F5', borderRadius: '8px', marginBottom: '20px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                    <span>商品總計：</span>
-                    <span>${cartTotal}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, fontSize: '18px', paddingTop: '10px', borderTop: '1px solid #ddd' }}>
-                    <span>總計：</span>
-                    <span style={{ color: '#A68B6A' }}>${cartTotal}</span>
-                  </div>
+                <div style={{ fontSize: '18px', fontWeight: 700, textAlign: 'right', marginBottom: '16px' }}>
+                  總計: ${cartTotal}
                 </div>
-
-                <button 
-                  onClick={handleCheckout}
-                  style={{ 
-                    width: '100%', 
-                    padding: '15px', 
-                    background: 'linear-gradient(135deg, #A68B6A, #8B7355)', 
-                    color: '#fff', 
-                    border: 'none', 
-                    borderRadius: '8px', 
-                    cursor: 'pointer', 
-                    fontSize: '16px', 
-                    fontWeight: 600 
-                  }}
-                >
+                <button onClick={() => { setShowCart(false); setShowCheckout(true) }} style={{ width: '100%', padding: '14px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}>
                   前往結帳
                 </button>
               </>
@@ -326,159 +212,84 @@ export default function Products() {
 
       {/* Checkout Modal */}
       {showCheckout && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
-          <div style={{ background: '#fff', borderRadius: '12px', padding: '30px', width: '90%', maxWidth: '500px', maxHeight: '90vh', overflow: 'auto' }}>
-            <h2 style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              結帳
-              <button onClick={() => setShowCheckout(false)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}>✕</button>
-            </h2>
-
-            {/* 進度 */}
-            <div style={{ display: 'flex', marginBottom: '30px', gap: '10px' }}>
-              <div style={{ flex: 1, padding: '10px', background: checkoutStep >= 1 ? '#A68B6A' : '#ddd', color: checkoutStep >= 1 ? '#fff' : '#666', borderRadius: '8px', textAlign: 'center', fontSize: '12px' }}>1. 確認商品</div>
-              <div style={{ flex: 1, padding: '10px', background: checkoutStep >= 2 ? '#A68B6A' : '#ddd', color: checkoutStep >= 2 ? '#fff' : '#666', borderRadius: '8px', textAlign: 'center', fontSize: '12px' }}>2. 送貨資料</div>
-              <div style={{ flex: 1, padding: '10px', background: checkoutStep >= 3 ? '#A68B6A' : '#ddd', color: checkoutStep >= 3 ? '#fff' : '#666', borderRadius: '8px', textAlign: 'center', fontSize: '12px' }}>3. 確認訂單</div>
-            </div>
-
-            {/* Step 1: 確認商品 */}
-            {checkoutStep === 1 && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 300, padding: '20px' }} onClick={() => setShowCheckout(false)}>
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', maxWidth: '450px', width: '100%' }} onClick={e => e.stopPropagation()}>
+            {checkoutStep === 1 ? (
               <>
-                <h3 style={{ marginBottom: '15px' }}>📦 訂單摘要</h3>
-                {cart.map((item, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee' }}>
-                    <span>{item.name}</span>
-                    <span style={{ fontWeight: 600 }}>${item.price}</span>
-                  </div>
-                ))}
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '15px 0', fontWeight: 600, fontSize: '18px' }}>
-                  <span>總計：</span>
-                  <span style={{ color: '#A68B6A' }}>${cartTotal}</span>
+                <h3 style={{ marginBottom: '20px' }}>結帳資料</h3>
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>姓名 *</label>
+                  <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '14px' }} />
                 </div>
-                <button 
-                  onClick={() => setCheckoutStep(2)}
-                  style={{ width: '100%', padding: '14px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, marginTop: '20px' }}
-                >
-                  下一步
-                </button>
-              </>
-            )}
-
-            {/* Step 2: 送貨資料 */}
-            {checkoutStep === 2 && (
-              <>
-                <h3 style={{ marginBottom: '15px' }}>📝 送貨資料</h3>
-                <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 600, fontSize: '14px' }}>姓名 *</label>
-                  <input 
-                    type="text" 
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px' }}
-                  />
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>電話 *</label>
+                  <input type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '14px' }} />
                 </div>
-                <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 600, fontSize: '14px' }}>電話 *</label>
-                  <input 
-                    type="tel" 
-                    value={formData.phone}
-                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                    style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px' }}
-                  />
-                </div>
-                <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 600, fontSize: '14px' }}>取貨方式</label>
-                  <select 
-                    value={formData.delivery}
-                    onChange={(e) => setFormData({...formData, delivery: e.target.value})}
-                    style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px' }}
-                  >
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>送貨方式</label>
+                  <select value={formData.delivery} onChange={e => setFormData({...formData, delivery: e.target.value})} style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '14px' }}>
                     <option>門市取貨</option>
-                    <option>送貨上門 (+$50)</option>
+                    <option>送貨上門</option>
                   </select>
                 </div>
                 {formData.delivery === '送貨上門' && (
-                  <div style={{ marginBottom: '15px' }}>
-                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 600, fontSize: '14px' }}>送貨地址</label>
-                    <input 
-                      type="text" 
-                      value={formData.address}
-                      onChange={(e) => setFormData({...formData, address: e.target.value})}
-                      placeholder="請輸入送貨地址"
-                      style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px' }}
-                    />
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>送貨地址</label>
+                    <input type="text" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '14px' }} />
                   </div>
                 )}
                 <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 600, fontSize: '14px' }}>付款方式</label>
-                  <select 
-                    value={formData.payment}
-                    onChange={(e) => setFormData({...formData, payment: e.target.value})}
-                    style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px' }}
-                  >
+                  <label style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>付款方式</label>
+                  <select value={formData.payment} onChange={e => setFormData({...formData, payment: e.target.value})} style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '14px' }}>
                     <option>現金</option>
-                    <option>轉數快</option>
+                    <option>信用卡</option>
                     <option>PayMe</option>
+                    <option>轉數快</option>
                   </select>
                 </div>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button 
-                    onClick={() => setCheckoutStep(1)}
-                    style={{ flex: 1, padding: '14px', background: '#fff', color: '#666', border: '1px solid #ddd', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}
-                  >
-                    返回
-                  </button>
-                  <button 
-                    onClick={() => setCheckoutStep(3)}
-                    style={{ flex: 1, padding: '14px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}
-                  >
-                    下一步
-                  </button>
+                <div style={{ background: '#FAF8F5', padding: '12px', borderRadius: '8px', marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '6px' }}>
+                    <span>貨品總數:</span>
+                    <span>{cart.length}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 700 }}>
+                    <span>總計:</span>
+                    <span style={{ color: '#A68B6A' }}>${cartTotal}</span>
+                  </div>
                 </div>
+                <button onClick={handleCheckout} style={{ width: '100%', padding: '14px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}>
+                  確認訂單
+                </button>
               </>
-            )}
-
-            {/* Step 3: 確認訂單 */}
-            {checkoutStep === 3 && (
+            ) : (
               <>
-                <h3 style={{ marginBottom: '15px' }}>✅ 確認訂單</h3>
-                <div style={{ background: '#FAF8F5', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
-                  <p><strong>客戶：</strong>{formData.name}</p>
-                  <p><strong>電話：</strong>{formData.phone}</p>
-                  <p><strong>取貨方式：</strong>{formData.delivery}</p>
-                  <p><strong>付款方式：</strong>{formData.payment}</p>
-                </div>
-                <div style={{ padding: '15px', background: '#FAF8F5', borderRadius: '8px', marginBottom: '20px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                    <span>商品總計：</span>
-                    <span>${cartTotal}</span>
-                  </div>
-                  {deliveryFee > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                      <span>送貨費：</span>
-                      <span>${deliveryFee}</span>
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '20px', paddingTop: '10px', borderTop: '1px solid #ddd' }}>
-                    <span>總計：</span>
-                    <span style={{ color: '#A68B6A' }}>${finalTotal}</span>
-                  </div>
+                <h3 style={{ marginBottom: '20px', textAlign: 'center' }}>確認訂單</h3>
+                <div style={{ background: '#FAF8F5', padding: '16px', borderRadius: '8px', marginBottom: '20px' }}>
+                  <p style={{ marginBottom: '8px' }}><strong>客戶:</strong> {formData.name}</p>
+                  <p style={{ marginBottom: '8px' }}><strong>電話:</strong> {formData.phone}</p>
+                  <p style={{ marginBottom: '8px' }}><strong>送貨:</strong> {formData.delivery}</p>
+                  {formData.address && <p style={{ marginBottom: '8px' }}><strong>地址:</strong> {formData.address}</p>}
+                  <p style={{ marginBottom: '8px' }}><strong>付款:</strong> {formData.payment}</p>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <button 
-                    onClick={() => setCheckoutStep(2)}
-                    style={{ flex: 1, padding: '14px', background: '#fff', color: '#666', border: '1px solid #ddd', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}
-                  >
-                    返回
-                  </button>
-                  <button 
-                    onClick={handlePlaceOrder}
-                    style={{ flex: 1, padding: '14px', background: 'linear-gradient(135deg, #A68B6A, #8B7355)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}
-                  >
-                    確認訂單
-                  </button>
+                  <button onClick={() => setCheckoutStep(1)} style={{ flex: 1, padding: '12px', background: '#f5f5f5', color: '#333', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px' }}>返回</button>
+                  <button onClick={handlePlaceOrder} style={{ flex: 1, padding: '12px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}>確認付款</button>
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Order Success */}
+      {orderPlaced && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 400, padding: '20px' }}>
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '30px', textAlign: 'center', maxWidth: '350px' }}>
+            <div style={{ fontSize: '60px', marginBottom: '20px' }}>✅</div>
+            <h2 style={{ color: '#A68B6A', marginBottom: '10px' }}>訂單成功！</h2>
+            <p style={{ color: '#666', marginBottom: '20px' }}>訂單編號: <strong>{orderRef}</strong></p>
+            <p style={{ fontSize: '14px', color: '#666', marginBottom: '20px' }}>我哋會盡快聯繫你確認訂單</p>
+            <Link href="/" style={{ display: 'block', padding: '12px', background: '#A68B6A', color: '#fff', borderRadius: '8px', textDecoration: 'none', fontSize: '14px' }}>返回首頁</Link>
           </div>
         </div>
       )}
