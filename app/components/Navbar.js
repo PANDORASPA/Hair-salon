@@ -1,23 +1,47 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [user, setUser] = useState(null)
   const pathname = usePathname()
+
+  useEffect(() => {
+    // Check for logged in user on mount
+    const savedUser = localStorage.getItem('viva_user')
+    if (savedUser) {
+      try {
+        setUser(JSON.parse(savedUser))
+      } catch (e) {}
+    }
+
+    // Listen for storage events (login/logout from other tabs/pages)
+    const handleStorageChange = () => {
+      const u = localStorage.getItem('viva_user')
+      setUser(u ? JSON.parse(u) : null)
+    }
+    
+    // Custom event for same-page updates
+    const handleLocalLogin = () => handleStorageChange()
+    
+    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('viva_login_update', handleLocalLogin)
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('viva_login_update', handleLocalLogin)
+    }
+  }, [])
 
   const navLinks = [
     { href: '/', label: '首頁' },
-    { href: '/team', label: '髮型師' },
-    { href: '/services', label: '服務' },
-    { href: '/tickets', label: '套票' },
-    { href: '/coupons', label: '優惠' },
-    { href: '/products', label: '產品' },
-    { href: '/booking', label: '預約' },
-    { href: '/articles', label: '文章' },
-    { href: '/faq', label: 'FAQ' },
+    { href: '/services', label: '服務價目' },
+    { href: '/booking', label: '預約服務' },
+    { href: '/articles', label: '髮型專欄' },
+    { href: '/faq', label: '常見問題' },
   ]
 
   const closeMenu = () => setMobileMenuOpen(false)
@@ -41,7 +65,13 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
-            <Link href="/login" className="nav-login">登入</Link>
+            {user ? (
+              <Link href="/profile" className="nav-login" style={{ background: '#f3f4f6', color: '#333', border: '1px solid #e5e5e5' }}>
+                👤 {user.name}
+              </Link>
+            ) : (
+              <Link href="/booking" className="nav-login">登入</Link>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -84,9 +114,15 @@ export default function Navbar() {
           
           <div style={{ height: '1px', background: '#eee', margin: '12px 0' }} />
           
-          <Link href="/login" onClick={closeMenu}>
-            👤 登入 / 註冊
-          </Link>
+          {user ? (
+            <Link href="/profile" onClick={closeMenu}>
+              👤 會員中心 ({user.name})
+            </Link>
+          ) : (
+            <Link href="/booking" onClick={closeMenu}>
+              👤 會員登入
+            </Link>
+          )}
           
           <Link href="/admin" onClick={closeMenu}>
             ⚙️ 管理後台
