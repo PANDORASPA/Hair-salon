@@ -1,6 +1,7 @@
 import './globals.css'
 import Navbar from './components/Navbar'
 import MobileNav from './components/MobileNav'
+import { Toaster } from 'react-hot-toast'
 
 export const metadata = {
   title: 'VIVA HAIR - 髮型屋預約系統',
@@ -12,6 +13,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="zh-HK">
       <body>
+        <Toaster />
         <Navbar />
         <main>{children}</main>
         <footer className="footer">
