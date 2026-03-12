@@ -172,10 +172,17 @@ export default function Booking() {
 
   const timeSlots = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00']
 
+  // Get booking count for each day of the month
+  const getDayBookingCount = (day) => {
+    const dateStr = `${day}/${currentMonth + 1}/${currentYear}`
+    return bookings.filter(b => b.date === dateStr && (b.status === 'pending' || b.status === 'confirmed')).length
+  }
+
   const renderCalendar = () => {
     const firstDay = new Date(currentYear, currentMonth, 1).getDay()
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
     const today = new Date()
+    const maxBookingsPerDay = 5 // Assume max 5 bookings per day for color coding
     
     let days = []
     for (let i = 0; i < firstDay; i++) days.push(<div key={'empty-' + i}></div>)
@@ -185,6 +192,16 @@ export default function Booking() {
         (currentYear === today.getFullYear() && currentMonth < today.getMonth()) ||
         (currentYear === today.getFullYear() && currentMonth === today.getMonth() && d < today.getDate())
       const isSelected = selectedDate === d
+      const bookingCount = getDayBookingCount(d)
+      const occupancyRate = bookingCount / maxBookingsPerDay
+      
+      // Color coding: Green = available, Yellow = half full, Red = full
+      let bgColor = 'transparent'
+      if (!isPast && !isSelected) {
+        if (occupancyRate >= 1) bgColor = '#fee2e2' // Red - full
+        else if (occupancyRate >= 0.5) bgColor = '#fef3c7' // Yellow - half full
+        else bgColor = '#dcfce7' // Green - available
+      }
       
       days.push(
         <div
@@ -193,14 +210,20 @@ export default function Booking() {
           style={{
             cursor: isPast ? 'not-allowed' : 'pointer',
             opacity: isPast ? 0.3 : 1,
-            background: isSelected ? '#A68B6A' : 'transparent',
-            color: isSelected ? '#fff' : '#333',
+            background: isSelected ? '#A68B6A' : bgColor,
+            color: isSelected ? '#fff' : isPast ? '#999' : (occupancyRate >= 1 ? '#dc2626' : '#666'),
             padding: '10px',
             textAlign: 'center',
-            borderRadius: '8px'
+            borderRadius: '8px',
+            border: bookingCount > 0 && !isPast ? '1px solid #ddd' : 'none'
           }}
         >
-          {d}
+          <div style={{ fontWeight: isSelected ? 700 : 400 }}>{d}</div>
+          {!isPast && bookingCount > 0 && (
+            <div style={{ fontSize: '9px', color: isSelected ? '#fff' : (occupancyRate >= 1 ? '#dc2626' : '#666') }}>
+              {bookingCount}
+            </div>
+          )}
         </div>
       )
     }
