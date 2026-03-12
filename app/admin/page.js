@@ -25,8 +25,9 @@ export default function Admin() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedBooking, setSelectedBooking] = useState(null)
+  const [selectedStaffId, setSelectedStaffId] = useState(null)
 
-  // Tab groups - Stage 1
+  // Tab groups
   const tabGroups = [
     { name: '營運', tabs: [
       { id: 'dashboard', name: '📊 數據' },
@@ -56,6 +57,12 @@ export default function Admin() {
     if (auth === 'true') { setIsAuthenticated(true); fetchData() } 
     else setLoading(false)
   }, [])
+
+  useEffect(() => {
+    if (staff.length > 0 && !selectedStaffId) {
+      setSelectedStaffId(staff[0].id)
+    }
+  }, [staff])
 
   const fetchData = async () => {
     setLoading(true)
@@ -90,6 +97,75 @@ export default function Admin() {
     setBookings(bookings.map(b => b.id === id ? { ...b, status } : b))
   }
 
+  const updateOrderStatus = async (id, status) => {
+    await supabase.from('orders').update({ status }).eq('id', id)
+    setOrders(orders.map(o => o.id === id ? { ...o, status } : o))
+  }
+
+  const deleteOrder = async (id) => {
+    if (!confirm('確定刪除？')) return
+    await supabase.from('orders').delete().eq('id', id)
+    setOrders(orders.filter(o => o.id !== id))
+  }
+
+  // Staff functions
+  const addStaff = () => {
+    const newId = Math.max(...staff.map(s => s.id), 0) + 1
+    setStaff([...staff, { id: newId, name: '新員工', role: '髮型師', phone: '', enabled: true, schedule: {}, services: [], daysOff: [], photo_url: '', bio: '' }])
+    setSelectedStaffId(newId)
+  }
+
+  const deleteStaff = async (id) => {
+    if (!confirm('確定刪除此員工？')) return
+    await supabase.from('staff').delete().eq('id', id)
+    setStaff(staff.filter(s => s.id !== id))
+    if (selectedStaffId === id) setSelectedStaffId(null)
+  }
+
+  const updateStaffField = (id, field, value) => {
+    setStaff(staff.map(s => s.id === id ? { ...s, [field]: value } : s))
+  }
+
+  const toggleStaffService = (staffId, serviceId) => {
+    setStaff(staff.map(s => {
+      if (s.id === staffId) {
+        const svcs = s.services || []
+        const has = svcs.includes(serviceId)
+        return { ...s, services: has ? svcs.filter(id => id !== serviceId) : [...svcs, serviceId] }
+      }
+      return s
+    }))
+  }
+
+  const toggleDailyOff = (staffId, dayKey) => {
+    setStaff(staff.map(s => {
+      if (s.id === staffId) {
+        const daysOff = s.daysOff || []
+        const has = daysOff.includes(dayKey)
+        return { ...s, daysOff: has ? daysOff.filter(d => d !== dayKey) : [...daysOff, dayKey] }
+      }
+      return s
+    }))
+  }
+
+  const updateStaffSchedule = (staffId, day, field, value) => {
+    setStaff(staff.map(s => {
+      if (s.id === staffId) {
+        const schedule = s.schedule || {}
+        return { ...s, schedule: { ...schedule, [day]: { ...schedule[day], [field]: value } } }
+      }
+      return s
+    }))
+  }
+
+  const saveStaff = async () => {
+    setSaving(true)
+    for (const s of staff) await supabase.from('staff').upsert(s)
+    alert('已保存')
+    setSaving(false)
+  }
+
+  // Other save functions
   const saveProducts = async () => {
     setSaving(true)
     for (const p of products) await supabase.from('products').upsert(p)
@@ -125,13 +201,6 @@ export default function Admin() {
     setSaving(false)
   }
 
-  const saveStaff = async () => {
-    setSaving(true)
-    for (const s of staff) await supabase.from('staff').upsert(s)
-    alert('已保存')
-    setSaving(false)
-  }
-
   const today = new Date().toLocaleDateString('zh-HK')
   const stats = {
     todayBookings: bookings.filter(b => b.date === today).length,
@@ -141,6 +210,8 @@ export default function Admin() {
   }
 
   const filteredBookings = bookings.filter(b => (!searchTerm || b.name?.includes(searchTerm) || b.phone?.includes(searchTerm)) && (statusFilter === 'all' || b.status === statusFilter))
+  const filteredOrders = orders.filter(o => (!searchTerm || o.name?.includes(searchTerm) || o.phone?.includes(searchTerm)) && (statusFilter === 'all' || o.status === statusFilter))
+  const selectedStaff = staff.find(s => s.id === selectedStaffId)
 
   if (!isAuthenticated) return (
     <div style={{ padding: '40px 20px', textAlign: 'center' }}>
@@ -233,13 +304,14 @@ export default function Admin() {
             </div>
             <div style={{ background: '#fff', borderRadius: '10px', overflow: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                <thead><tr style={{ background: '#FAF8F5' }}><th style={{ padding: '8px', textAlign: 'left' }}>日期</th><th style={{ padding: '8px', textAlign: 'left' }}>客戶</th><th style={{ padding: '8px', textAlign: 'left' }}>服務</th><th style={{ padding: '8px', textAlign: 'left' }}>狀態</th></tr></thead>
+                <thead><tr style={{ background: '#FAF8F5' }}><th style={{ padding: '8px', textAlign: 'left' }}>日期</th><th style={{ padding: '8px', textAlign: 'left' }}>客戶</th><th style={{ padding: '8px', textAlign: 'left' }}>服務</th><th style={{ padding: '8px', textAlign: 'left' }}>髮型師</th><th style={{ padding: '8px', textAlign: 'left' }}>狀態</th></tr></thead>
                 <tbody>
                   {filteredBookings.slice(0, 30).map(b => (
                     <tr key={b.id} onClick={() => setSelectedBooking(b)} style={{ borderBottom: '1px solid #f5f5f5', cursor: 'pointer' }}>
                       <td style={{ padding: '8px' }}>{b.date}<div style={{ fontSize: '10px', color: '#999' }}>{b.time}</div></td>
                       <td style={{ padding: '8px' }}>{b.name}<div style={{ fontSize: '10px', color: '#999' }}>{b.phone}</div></td>
                       <td style={{ padding: '8px' }}>{b.service}</td>
+                      <td style={{ padding: '8px' }}>{b.staff_name || '-'}</td>
                       <td style={{ padding: '8px' }}><span style={{ padding: '4px 8px', background: b.status === 'pending' ? '#fef3c7' : b.status === 'confirmed' ? '#dbeafe' : '#dcfce7', borderRadius: '4px', fontSize: '10px' }}>{b.status === 'pending' ? '待確認' : b.status === 'confirmed' ? '已確認' : '已完成'}</span></td>
                     </tr>
                   ))}
@@ -279,20 +351,30 @@ export default function Admin() {
 
         {/* Orders */}
         {activeTab === 'orders' && (
-          <div style={{ background: '#fff', borderRadius: '10px', overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-              <thead><tr style={{ background: '#FAF8F5' }}><th style={{ padding: '8px', textAlign: 'left' }}>訂單</th><th style={{ padding: '8px', textAlign: 'left' }}>客戶</th><th style={{ padding: '8px', textAlign: 'left' }}>金額</th><th style={{ padding: '8px', textAlign: 'left' }}>狀態</th></tr></thead>
-              <tbody>
-                {orders.slice(0, 20).map(o => (
-                  <tr key={o.id} style={{ borderBottom: '1px solid #f5f5f5' }}>
-                    <td style={{ padding: '8px' }}>#{o.id}</td>
-                    <td style={{ padding: '8px' }}>{o.name}</td>
-                    <td style={{ padding: '8px' }}>${o.total}</td>
-                    <td style={{ padding: '8px' }}>{o.status}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div>
+            <div style={{ background: '#fff', borderRadius: '10px', overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                <thead><tr style={{ background: '#FAF8F5' }}><th style={{ padding: '8px', textAlign: 'left' }}>訂單</th><th style={{ padding: '8px', textAlign: 'left' }}>客戶</th><th style={{ padding: '8px', textAlign: 'left' }}>金額</th><th style={{ padding: '8px', textAlign: 'left' }}>狀態</th><th></th></tr></thead>
+                <tbody>
+                  {orders.slice(0, 20).map(o => (
+                    <tr key={o.id} style={{ borderBottom: '1px solid #f5f5f5' }}>
+                      <td style={{ padding: '8px' }}>#{o.id}<div style={{ fontSize: '10px', color: '#999' }}>{o.created_at?.split('T')[0]}</div></td>
+                      <td style={{ padding: '8px' }}>{o.name}<div style={{ fontSize: '10px', color: '#999' }}>{o.phone}</div></td>
+                      <td style={{ padding: '8px' }}>${o.total}</td>
+                      <td style={{ padding: '8px' }}>
+                        <select value={o.status} onChange={e => updateOrderStatus(o.id, e.target.value)} style={{ padding: '4px', fontSize: '10px' }}>
+                          <option value="pending">待處理</option>
+                          <option value="paid">已付款</option>
+                          <option value="shipped">已發貨</option>
+                          <option value="completed">已完成</option>
+                        </select>
+                      </td>
+                      <td><button onClick={() => deleteOrder(o.id)} style={{ padding: '4px 8px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '10px' }}>刪</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
@@ -314,113 +396,116 @@ export default function Admin() {
           </div>
         )}
 
-        {/* Staff */}
+        {/* Staff - Full Feature */}
         {activeTab === 'staff' && (
           <div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
-              {staff.map((s, i) => (
-                <div key={s.id} style={{ background: '#fff', padding: '16px', borderRadius: '10px', border: '1px solid #eee' }}>
-                  <input value={s.name} onChange={(e) => { const n = [...staff]; n[i].name = e.target.value; setStaff(n) }} placeholder="姓名" style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '6px', marginBottom: '8px' }} />
-                  <input value={s.role || ''} onChange={(e) => { const n = [...staff]; n[i].role = e.target.value; setStaff(n) }} placeholder="職位" style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
-                </div>
-              ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <h3>💇 員工設定</h3>
+              <button onClick={addStaff} style={{ padding: '8px 16px', background: '#A68B6A', color: '#fff', border: 'none', borderRadius: '6px' }}>+ 新增員工</button>
             </div>
-            <button onClick={saveStaff} disabled={saving} style={{ width: '100%', padding: '14px', background: saving ? '#ccc' : '#A68B6A', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 600, marginTop: '16px' }}>{saving ? '保存中...' : '💾 保存'}</button>
-          </div>
-        )}
-
-        {/* Services */}
-        {activeTab === 'services' && (
-          <div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
-              {services.map((sv, i) => (
-                <div key={sv.id} style={{ background: '#fff', padding: '16px', borderRadius: '10px', border: '1px solid #eee' }}>
-                  <input value={sv.name} onChange={(e) => { const n = [...services]; n[i].name = e.target.value; setServices(n) }} placeholder="服務名稱" style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '6px', marginBottom: '8px' }} />
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <input value={sv.price} onChange={(e) => { const n = [...services]; n[i].price = parseInt(e.target.value) || 0; setServices(n) }} type="number" placeholder="價格" style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
-                    <input value={sv.time || 60} onChange={(e) => { const n = [...services]; n[i].time = parseInt(e.target.value) || 60; setServices(n) }} type="number" placeholder="分鐘" style={{ width: '70px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
+            
+            {staff.length === 0 ? (
+              <div style={{ padding: '40px', textAlign: 'center', color: '#999', background: '#fff', borderRadius: '10px' }}>尚未有員工資料</div>
+            ) : (
+              <div style={{ display: 'flex', gap: '12px' }}>
+                {/* Staff List */}
+                <div style={{ width: '200px', flexShrink: 0 }}>
+                  <div style={{ background: '#fff', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+                    {staff.map(s => (
+                      <div key={s.id} onClick={() => setSelectedStaffId(s.id)} style={{ 
+                        padding: '14px 12px', 
+                        borderBottom: '1px solid #f0f0f0',
+                        cursor: 'pointer',
+                        background: selectedStaffId === s.id ? '#FAF8F5' : '#fff',
+                        borderLeft: selectedStaffId === s.id ? '4px solid #A68B6A' : '4px solid transparent'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: s.enabled ? '#A68B6A' : '#ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '16px', fontWeight: 600 }}>
+                            {s.name?.charAt(0) || '?'}
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '14px', fontWeight: 600 }}>{s.name}</div>
+                            <div style={{ fontSize: '11px', color: '#999' }}>{s.role}</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
-            <button onClick={saveServices} disabled={saving} style={{ width: '100%', padding: '14px', background: saving ? '#ccc' : '#A68B6A', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 600, marginTop: '16px' }}>{saving ? '保存中...' : '💾 保存'}</button>
-          </div>
-        )}
-
-        {/* Packages */}
-        {activeTab === 'packages' && (
-          <div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
-              {servicePackages.map((p, i) => (
-                <div key={p.id} style={{ background: '#fff', padding: '16px', borderRadius: '10px', border: '2px solid #A68B6A' }}>
-                  <input value={p.name} onChange={(e) => { const n = [...servicePackages]; n[i].name = e.target.value; setServicePackages(n) }} placeholder="套餐名稱" style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '6px', marginBottom: '8px' }} />
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <input value={p.price} onChange={(e) => { const n = [...servicePackages]; n[i].price = parseInt(e.target.value) || 0; setServicePackages(n) }} type="number" placeholder="套餐價" style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
-                    <input value={p.orig || 0} onChange={(e) => { const n = [...servicePackages]; n[i].orig = parseInt(e.target.value) || 0; setServicePackages(n) }} type="number" placeholder="原價" style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-            <button onClick={saveServicePackages} disabled={saving} style={{ width: '100%', padding: '14px', background: saving ? '#ccc' : '#A68B6A', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 600, marginTop: '16px' }}>{saving ? '保存中...' : '💾 保存'}</button>
-          </div>
-        )}
-
-        {/* Tickets */}
-        {activeTab === 'tickets' && (
-          <div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
-              {tickets.map((t, i) => (
-                <div key={t.id} style={{ background: '#fff', padding: '16px', borderRadius: '10px', border: '1px solid #eee' }}>
-                  <input value={t.name} onChange={(e) => { const n = [...tickets]; n[i].name = e.target.value; setTickets(n) }} placeholder="套票名稱" style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '6px', marginBottom: '8px' }} />
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <input value={t.price} onChange={(e) => { const n = [...tickets]; n[i].price = parseInt(e.target.value) || 0; setTickets(n) }} type="number" placeholder="價格" style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
-                    <input value={t.times || 1} onChange={(e) => { const n = [...tickets]; n[i].times = parseInt(e.target.value) || 1; setTickets(n) }} type="number" placeholder="次數" style={{ width: '60px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-            <button onClick={saveTickets} disabled={saving} style={{ width: '100%', padding: '14px', background: saving ? '#ccc' : '#A68B6A', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 600, marginTop: '16px' }}>{saving ? '保存中...' : '💾 保存'}</button>
-          </div>
-        )}
-
-        {/* Coupons */}
-        {activeTab === 'coupons' && (
-          <div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
-              {coupons.map((c, i) => (
-                <div key={c.id} style={{ background: '#fff', padding: '16px', borderRadius: '10px', border: '1px solid #eee' }}>
-                  <input value={c.code} onChange={(e) => { const n = [...coupons]; n[i].code = e.target.value.toUpperCase(); setCoupons(n) }} placeholder="優惠碼" style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '6px', marginBottom: '8px', textTransform: 'uppercase' }} />
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <input value={c.discount} onChange={(e) => { const n = [...coupons]; n[i].discount = parseInt(e.target.value) || 0; setCoupons(n) }} type="number" placeholder="折扣" style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }} />
-                    <select value={c.type || 'percent'} onChange={(e) => { const n = [...coupons]; n[i].type = e.target.value; setCoupons(n) }} style={{ padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }}>
-                      <option value="percent">%</option>
-                      <option value="fixed">$</option>
-                    </select>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <button onClick={saveCoupons} disabled={saving} style={{ width: '100%', padding: '14px', background: saving ? '#ccc' : '#A68B6A', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 600, marginTop: '16px' }}>{saving ? '保存中...' : '💾 保存'}</button>
-          </div>
-        )}
-
-        {/* Customers */}
-        {activeTab === 'customers' && (
-          <div style={{ background: '#fff', borderRadius: '10px', overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-              <thead><tr style={{ background: '#FAF8F5' }}><th style={{ padding: '10px', textAlign: 'left' }}>姓名</th><th style={{ padding: '10px', textAlign: 'left' }}>電話</th></tr></thead>
-              <tbody>
-                {users.map(u => (
-                  <tr key={u.id} style={{ borderBottom: '1px solid #f5f5f5' }}>
-                    <td style={{ padding: '10px' }}>{u.name}</td>
-                    <td style={{ padding: '10px' }}>{u.phone}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
+                
+                {/* Staff Detail */}
+                <div style={{ flex: 1 }}>
+                  {selectedStaff ? (
+                    <div style={{ background: '#fff', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+                      {/* Basic Info */}
+                      <div style={{ padding: '20px', borderBottom: '1px solid #f0f0f0' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
+                          <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: selectedStaff.photo_url ? `url(${selectedStaff.photo_url}) center/cover` : '#A68B6A', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '28px', fontWeight: 700, overflow: 'hidden' }}>
+                            {!selectedStaff.photo_url && (selectedStaff.name?.charAt(0) || '?')}
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                              <input type="text" value={selectedStaff.name} onChange={e => updateStaffField(selectedStaff.id, 'name', e.target.value)} placeholder="姓名" style={{ fontSize: '18px', fontWeight: 600, padding: '8px 12px', border: '1px solid #eee', borderRadius: '8px', width: '120px' }} />
+                              <select value={selectedStaff.role} onChange={e => updateStaffField(selectedStaff.id, 'role', e.target.value)} style={{ padding: '8px 12px', border: '1px solid #eee', borderRadius: '8px', fontSize: '14px' }}>
+                                <option>髮型師</option>
+                                <option>助理</option>
+                                <option>經理</option>
+                              </select>
+                            </div>
+                            <input type="text" value={selectedStaff.phone || ''} onChange={e => updateStaffField(selectedStaff.id, 'phone', e.target.value)} placeholder="電話" style={{ padding: '8px 12px', border: '1px solid #eee', borderRadius: '8px', fontSize: '14px', width: '180px' }} />
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', cursor: 'pointer' }}>
+                              <input type="checkbox" checked={selectedStaff.enabled} onChange={e => updateStaffField(selectedStaff.id, 'enabled', e.target.checked)} />
+                              啟用
+                            </label>
+                            <button onClick={() => deleteStaff(selectedStaff.id)} style={{ padding: '8px 14px', background: '#fef2f2', color: '#ef4444', border: 'none', borderRadius: '6px', fontSize: '13px' }}>🗑️ 刪除</button>
+                          </div>
+                        </div>
+                        <input type="text" value={selectedStaff.photo_url || ''} onChange={e => updateStaffField(selectedStaff.id, 'photo_url', e.target.value)} placeholder="相片 URL" style={{ width: '100%', padding: '10px', border: '1px solid #eee', borderRadius: '8px', fontSize: '13px', marginBottom: '12px' }} />
+                        <textarea value={selectedStaff.bio || ''} onChange={e => updateStaffField(selectedStaff.id, 'bio', e.target.value)} placeholder="個人簡介" style={{ width: '100%', padding: '10px', border: '1px solid #eee', borderRadius: '8px', fontSize: '13px', minHeight: '80px', resize: 'vertical' }} />
+                      </div>
+                      
+                      {/* Services */}
+                      <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0', background: '#fafafa' }}>
+                        <div style={{ fontSize: '14px', color: '#666', marginBottom: '12px', fontWeight: 500 }}>可提供服務</div>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          {services.map(sv => (
+                            <button key={sv.id} onClick={() => toggleStaffService(selectedStaff.id, sv.id)} 
+                              style={{ padding: '8px 16px', background: selectedStaff.services?.includes(sv.id) ? '#A68B6A' : '#fff', 
+                              color: selectedStaff.services?.includes(sv.id) ? '#fff' : '#666', border: '1px solid #e5e5e5', 
+                              borderRadius: '20px', fontSize: '13px', cursor: 'pointer' }}>
+                              {sv.emoji} {sv.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      {/* Schedule */}
+                      <div style={{ padding: '20px' }}>
+                        <div style={{ fontSize: '14px', color: '#666', marginBottom: '16px', fontWeight: 500 }}>每週上班時間</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '10px', marginBottom: '20px' }}>
+                          {['日', '一', '二', '三', '四', '五', '六'].map((day, idx) => {
+                            const dayKey = idx.toString()
+                            const daySchedule = selectedStaff.schedule?.[dayKey]
+                            const isOff = selectedStaff.daysOff?.includes(dayKey)
+                            return (
+                              <div key={idx} style={{ textAlign: 'center' }}>
+                                <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px', fontWeight: 500 }}>{day}</div>
+                                {isOff ? (
+                                  <div onClick={() => toggleDailyOff(selectedStaff.id, dayKey)} style={{ padding: '12px 4px', background: '#ef4444', color: '#fff', borderRadius: '8px', fontSize: '12px', cursor: 'pointer' }}>放假</div>
+                                ) : daySchedule?.start ? (
+                                  <div onClick={() => toggleDailyOff(selectedStaff.id, dayKey)} style={{ padding: '12px 4px', background: '#22c55e', color: '#fff', borderRadius: '8px', fontSize: '11px', cursor: 'pointer' }}>
+                                    {daySchedule.start}-{daySchedule.end}
+                                  </div>
+                                ) : (
+                                  <div onClick={() => updateStaffSchedule(selectedStaff.id, dayKey, 'start', '09:00')} style={{ padding: '12px 4px', background: '#f5f5f5', color: '#999', borderRadius: '8px', fontSize: '12px', cursor: 'pointer' }}>休息</div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                        <div style={{ background: '#f5f5f5', padding: '16px', borderRadius: '8px' }}>
+                          <div style={{ fontSize: '13px', color: '#666', marginBottom: '10px' }}>編輯時間：</div>
+                          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                            {['0', '1', '2', '3
