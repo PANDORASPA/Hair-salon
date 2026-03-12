@@ -10,6 +10,7 @@ export default function Navbar() {
 
   const navLinks = [
     { href: '/', label: '首頁' },
+    { href: '/team', label: '髮型師' },
     { href: '/services', label: '服務' },
     { href: '/tickets', label: '套票' },
     { href: '/coupons', label: '優惠' },
@@ -41,7 +42,6 @@ export default function Navbar() {
               </Link>
             ))}
             <Link href="/login" className="nav-login">登入</Link>
-            <Link href="/admin" className="nav-admin">後台</Link>
           </div>
 
           {/* Mobile Menu Button */}
