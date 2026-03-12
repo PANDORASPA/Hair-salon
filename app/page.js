@@ -7,13 +7,15 @@ import { supabase } from '../lib/supabase'
 export default function Home() {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [services, setServices] = useState([])
+  const [servicePackages, setServicePackages] = useState([])
   const [beforeAfter, setBeforeAfter] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function fetchData() {
-      const [servicesData, baData] = await Promise.all([
+      const [servicesData, pkgData, baData] = await Promise.all([
         supabase.from('services').select('*').eq('enabled', true).order('sort_order').limit(3),
+        supabase.from('service_packages').select('*').eq('enabled', true).order('id'),
         supabase.from('before_after').select('*').eq('enabled', true).order('created_at', { ascending: false }).limit(6)
       ])
       
@@ -24,6 +26,16 @@ export default function Home() {
           price: s.price,
           time: s.time ? `${s.time}分` : '60分',
           img: s.emoji || getServiceEmoji(s.name)
+        })))
+      }
+      
+      if (pkgData.data) {
+        setServicePackages(pkgData.data.map(p => ({
+          id: p.id,
+          name: p.name,
+          price: p.price,
+          orig: p.orig,
+          emoji: p.emoji || '💎'
         })))
       }
       
@@ -130,6 +142,33 @@ export default function Home() {
           )}
         </div>
       </section>
+
+      {/* Service Packages */}
+      {servicePackages.length > 0 && (
+        <section style={{ padding: '32px 16px', background: '#FAF8F5' }}>
+          <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+            <h2 style={{ textAlign: 'center', fontSize: '24px', marginBottom: '20px', color: '#3D3D3D' }}>💎 服務套餐</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+              {servicePackages.map(pkg => (
+                <div key={pkg.id} style={{ background: '#fff', border: '2px solid #A68B6A', borderRadius: '16px', padding: '20px', position: 'relative' }}>
+                  <div style={{ position: 'absolute', top: '-10px', right: '10px', background: '#A68B6A', color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600 }}>
+                    套餐
+                  </div>
+                  <div style={{ fontSize: '36px', marginBottom: '12px' }}>{pkg.emoji}</div>
+                  <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px' }}>{pkg.name}</h3>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '12px' }}>
+                    <span style={{ fontSize: '24px', fontWeight: 700, color: '#A68B6A' }}>${pkg.price}</span>
+                    {pkg.orig > pkg.price && <span style={{ fontSize: '14px', color: '#999', textDecoration: 'line-through' }}>${pkg.orig}</span>}
+                  </div>
+                  <Link href="/booking" style={{ display: 'block', padding: '10px', background: 'linear-gradient(135deg, #A68B6A, #8B7355)', color: '#fff', borderRadius: '8px', textDecoration: 'none', fontWeight: 600, textAlign: 'center' }}>
+                    立即預約
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Location / Google Maps */}
       <section style={{ padding: '32px 16px', background: '#FAF8F5' }}>
