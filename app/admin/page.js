@@ -74,8 +74,9 @@ export default function Admin() {
   }, [])
 
   const fetchData = async () => {
-    setLoading(true)
-    const [b, o, s, sp, p, t, c, cust, st, set, art, f, sh, r] = await Promise.all([
+    try {
+      setLoading(true)
+      const [b, o, s, sp, p, t, c, cust, st, set, art, f, sh, r] = await Promise.all([
       supabase.from('bookings').select('*').order('created_at', { ascending: false }),
       supabase.from('orders').select('*').order('created_at', { ascending: false }),
       supabase.from('services').select('*').order('sort_order'),
@@ -91,19 +92,19 @@ export default function Admin() {
       supabase.from('staff_shifts').select('*'),
       supabase.from('reviews').select('*').order('created_at', { ascending: false }),
     ])
-    if (b.data) setBookings(b.data)
-    if (o.data) setOrders(o.data)
-    if (s.data) setServices(s.data)
-    if (sp.data) setServicePackages(sp.data)
-    if (p.data) setProducts(p.data)
-    if (t.data) setTickets(t.data)
-    if (c.data) setCoupons(c.data)
-    if (cust.data) setUsers(cust.data)
-    if (st.data) setStaff(st.data)
-    if (art.data) setArticles(art.data)
-    if (f.data) setFaqs(f.data)
-    if (sh.data) setStaffShifts(sh.data)
-    if (r.data) setReviews(r.data)
+    if (b.data) setBookings(b.data || [])
+    if (o.data) setOrders(o.data || [])
+    if (s.data) setServices(s.data || [])
+    if (sp.data) setServicePackages(sp.data || [])
+    if (p.data) setProducts(p.data || [])
+    if (t.data) setTickets(t.data || [])
+    if (c.data) setCoupons(c.data || [])
+    if (cust.data) setUsers(cust.data || [])
+    if (st.data) setStaff(st.data || [])
+    if (art.data) setArticles(art.data || [])
+    if (f.data) setFaqs(f.data || [])
+    if (sh.data) setStaffShifts(sh.data || [])
+    if (r.data) setReviews(r.data || [])
     if (set.data) {
       const settingsData = set.data.reduce((acc, item) => {
         acc[item.key] = item.value;
@@ -111,8 +112,13 @@ export default function Admin() {
       }, {});
       setSettings(settingsData);
     }
+  } catch (error) {
+    console.error('Error fetching data:', error)
+    toast.error('無法載入數據')
+  } finally {
     setLoading(false)
   }
+}
 
   const saveShifts = async (shifts) => {
     setSaving(true)
@@ -143,6 +149,16 @@ export default function Admin() {
     await supabase.from('bookings').update({ status }).eq('id', id)
     setBookings(bookings.map(b => b.id === id ? { ...b, status } : b))
     toast.success('狀態已更新')
+  }
+
+  const updateOrderStatus = async (id, status) => {
+    const { error } = await supabase.from('orders').update({ status }).eq('id', id)
+    if (error) {
+      toast.error('更新失敗')
+      return
+    }
+    setOrders(orders.map(o => o.id === id ? { ...o, status } : o))
+    toast.success('訂單狀態已更新')
   }
 
   const updateBookingStaff = async (id, staffId) => {
@@ -481,7 +497,7 @@ export default function Admin() {
 
         {activeTab === 'analytics' && <AnalyticsTab bookings={bookings} orders={orders} reviews={reviews} />}
 
-        {activeTab === 'orders' && <OrdersTab orders={orders} />}
+        {activeTab === 'orders' && <OrdersTab orders={orders} onUpdateOrder={updateOrderStatus} />}
 
         {activeTab === 'bookings' && (
           <BookingsTab 
