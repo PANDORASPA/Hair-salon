@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { toast } from 'react-hot-toast'
 import { supabase } from '../../lib/supabase'
 
 export default function Products() {
@@ -74,7 +75,7 @@ export default function Products() {
 
   const handleCheckout = async () => {
     if (!formData.name || !formData.phone) {
-      alert('請填寫姓名和電話')
+      toast.error('請填寫姓名和電話')
       return
     }
 
@@ -83,7 +84,7 @@ export default function Products() {
 
   const handlePlaceOrder = async () => {
     if (!formData.name || !formData.phone) {
-      alert('請填寫姓名和電話')
+      toast.error('請填寫姓名和電話')
       return
     }
 
