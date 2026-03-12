@@ -4,19 +4,21 @@
 -- 1. Create bookings table
 CREATE TABLE IF NOT EXISTS bookings (
   id SERIAL PRIMARY KEY,
-  ref VARCHAR(20) UNIQUE NOT NULL,
+  ref VARCHAR(50) UNIQUE NOT NULL,
   service VARCHAR(100) NOT NULL,
   service_price INTEGER NOT NULL,
   date VARCHAR(20) NOT NULL,
   time VARCHAR(10) NOT NULL,
   staff_id INTEGER,
   staff_name VARCHAR(100),
+  customer_id INTEGER REFERENCES customers(id),
   name VARCHAR(100) NOT NULL,
   phone VARCHAR(20) NOT NULL,
-  coupon VARCHAR(20),
+  coupon VARCHAR(50), -- Increased length
   final_price INTEGER NOT NULL,
-  status VARCHAR(20) DEFAULT 'pending',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  status VARCHAR(20) DEFAULT 'pending', -- pending, confirmed, completed, cancelled, no_show
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  CONSTRAINT unique_booking UNIQUE (date, time, staff_id)
 );
 
 -- 2. Create users table
@@ -27,6 +29,17 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(255) UNIQUE NOT NULL,
   password VARCHAR(255) NOT NULL,
   points INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create customers table
+CREATE TABLE IF NOT EXISTS customers (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  phone VARCHAR(20) UNIQUE NOT NULL,
+  email VARCHAR(255),
+  notes TEXT,
+  membership_level VARCHAR(20) DEFAULT 'Regular', -- Added membership_level
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -58,8 +71,11 @@ CREATE TABLE IF NOT EXISTS services (
   id SERIAL PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
   price INTEGER DEFAULT 0,
-  time INTEGER DEFAULT 60,
-  enabled BOOLEAN DEFAULT true,
+  time INTEGER DEFAULT 60, -- duration in minutes
+  category VARCHAR(50), -- Added category
+  description TEXT, -- Added description
+  image_url VARCHAR(500), -- Added image_url
+  enabled BOOLEAN DEFAULT true, -- active status
   sort_order INTEGER DEFAULT 0
 );
 
@@ -78,10 +94,13 @@ CREATE TABLE IF NOT EXISTS coupons (
   id SERIAL PRIMARY KEY,
   code VARCHAR(50) UNIQUE NOT NULL,
   name VARCHAR(100),
-  discount INTEGER DEFAULT 0,
-  type VARCHAR(20) DEFAULT 'percent',
+  discount INTEGER DEFAULT 0, -- value
+  type VARCHAR(20) DEFAULT 'percent', -- percentage or fixed
   min_spend INTEGER DEFAULT 0,
-  enabled BOOLEAN DEFAULT true
+  start_date TIMESTAMP WITH TIME ZONE, -- valid_from
+  end_date TIMESTAMP WITH TIME ZONE, -- valid_to
+  usage_limit INTEGER DEFAULT 0, -- Added usage_limit (0 for unlimited)
+  enabled BOOLEAN DEFAULT true -- active status
 );
 
 -- Enable RLS
@@ -92,15 +111,44 @@ ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE services ENABLE ROW LEVEL SECURITY;
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE coupons ENABLE ROW LEVEL SECURITY;
+ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
 
--- Public policies (anyone can read/write for demo)
-CREATE POLICY "Public bookings" ON bookings FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Public users" ON users FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Public orders" ON orders FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Public settings" ON settings FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Public services" ON services FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Public products" ON products FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Public coupons" ON coupons FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+-- More secure RLS policies
+
+-- For public tables that anyone can read
+CREATE POLICY "Public read access" ON services FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Admin full access" ON services FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+CREATE POLICY "Public read access" ON products FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Admin full access" ON products FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+CREATE POLICY "Public read access" ON coupons FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Admin full access" ON coupons FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+CREATE POLICY "Public read access" ON customers FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Admin full access" ON customers FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+CREATE POLICY "Public read access" ON staff FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Admin full access" ON staff FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+CREATE POLICY "Public read access" ON articles FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Admin full access" ON articles FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+CREATE POLICY "Public read access" ON faqs FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Admin full access" ON faqs FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- For bookings table
+CREATE POLICY "Allow public insert" ON bookings FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "Admin full access" ON bookings FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- For users table
+CREATE POLICY "Admin full access" ON users FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- For orders table
+CREATE POLICY "Admin full access" ON orders FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- For settings table
+CREATE POLICY "Admin full access" ON settings FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- Insert default services
 INSERT INTO services (name, price, time, enabled, sort_order) VALUES
@@ -133,10 +181,14 @@ CREATE TABLE IF NOT EXISTS staff (
   name VARCHAR(100) NOT NULL,
   role VARCHAR(50) DEFAULT '髮型師',
   phone VARCHAR(20),
-  enabled BOOLEAN DEFAULT true,
-  schedule JSONB DEFAULT '{}',
+  photo_url VARCHAR(500), -- Added photo_url
+  bio TEXT, -- Added bio
+  enabled BOOLEAN DEFAULT true, -- active status
+  schedule JSONB DEFAULT '{}', -- contains start_time, end_time per day
   services JSONB DEFAULT '[]',
   daysOff JSONB DEFAULT '[]',
+  break_start TIME DEFAULT '15:00', -- Added break_start
+  break_end TIME DEFAULT '16:00', -- Added break_end
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -188,11 +240,78 @@ INSERT INTO articles (title, category, excerpt, enabled, sort_order) VALUES
   ('脫髮原因同改善方法', '头皮護理', '點解會甩頭髮？等我哋教你點樣改善...', true, 3)
 ON CONFLICT DO NOTHING;
 
--- Insert default faqs
-INSERT INTO faqs (question, answer, sort_order, enabled) VALUES
-  ('如何預約服務？', '您可以通過我們的網站直接預約，選擇服務項目、日期和時間，填寫資料後即可提交預約。', 1, true),
-  ('預約需要付訂金嗎？', '一般預約不需要付訂金，但如果您需要取消或更改預約，請提前一天通知我們。', 2, true),
-  ('營業時間是？', '我們的營業時間為早上9點至晚上7點，每逢星期一休息。', 3, true),
-  ('可以網上付款嗎？', '是的，我們支援信用卡、PayMe和轉數快等付款方式。', 4, true),
-  ('取消預約的政策？', '請於預約日期前1天取消或更改，否則可能會收取一定費用。', 5, true)
-ON CONFLICT DO NOTHING;
+-- 11. Create service_packages table (服務套餐)
+CREATE TABLE IF NOT EXISTS service_packages (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  price INTEGER DEFAULT 0,
+  description TEXT,
+  items JSONB DEFAULT '[]', -- List of service IDs included
+  enabled BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 12. Create tickets table (套票/次數卡)
+CREATE TABLE IF NOT EXISTS tickets (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  price INTEGER DEFAULT 0,
+  count INTEGER DEFAULT 1, -- Number of times
+  service_id INTEGER REFERENCES services(id),
+  enabled BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable RLS for new tables
+ALTER TABLE service_packages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public service_packages" ON service_packages FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+
+ALTER TABLE tickets ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public tickets" ON tickets FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+
+-- 13. Create staff_shifts table (按月/日排班)
+CREATE TABLE IF NOT EXISTS staff_shifts (
+  id SERIAL PRIMARY KEY,
+  staff_id INTEGER REFERENCES staff(id) ON DELETE CASCADE,
+  date DATE NOT NULL,
+  start_time TIME,
+  end_time TIME,
+  is_off BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(staff_id, date)
+);
+
+-- Enable RLS for staff_shifts
+ALTER TABLE staff_shifts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public staff_shifts" ON staff_shifts FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+
+-- 14. Create user_tickets table (客戶持有的套票)
+CREATE TABLE IF NOT EXISTS user_tickets (
+  id SERIAL PRIMARY KEY,
+  customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
+  ticket_id INTEGER REFERENCES tickets(id),
+  ticket_name VARCHAR(100), -- Snapshot name
+  remaining_count INTEGER DEFAULT 0,
+  expiry_date DATE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable RLS for user_tickets
+ALTER TABLE user_tickets ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public user_tickets" ON user_tickets FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+
+-- 15. Create reviews table (評價系統)
+CREATE TABLE IF NOT EXISTS reviews (
+  id SERIAL PRIMARY KEY,
+  booking_id INTEGER REFERENCES bookings(id) UNIQUE, -- One review per booking
+  customer_id INTEGER REFERENCES customers(id),
+  staff_id INTEGER REFERENCES staff(id),
+  rating INTEGER CHECK (rating >= 1 AND rating <= 5),
+  comment TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable RLS for reviews
+ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public reviews" ON reviews FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+
