@@ -7,29 +7,32 @@ import { supabase } from '../lib/supabase'
 export default function Home() {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [services, setServices] = useState([])
+  const [beforeAfter, setBeforeAfter] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    async function fetchServices() {
-      const { data } = await supabase
-        .from('services')
-        .select('*')
-        .eq('enabled', true)
-        .order('sort_order')
-        .limit(3)
+    async function fetchData() {
+      const [servicesData, baData] = await Promise.all([
+        supabase.from('services').select('*').eq('enabled', true).order('sort_order').limit(3),
+        supabase.from('before_after').select('*').eq('enabled', true).order('created_at', { ascending: false }).limit(6)
+      ])
       
-      if (data) {
-        setServices(data.map(s => ({
+      if (servicesData.data) {
+        setServices(servicesData.data.map(s => ({
           id: s.id,
           name: s.name,
           price: s.price,
           time: s.time ? `${s.time}分` : '60分',
-          img: getServiceEmoji(s.name)
+          img: s.emoji || getServiceEmoji(s.name)
         })))
+      }
+      
+      if (baData.data) {
+        setBeforeAfter(baData.data)
       }
       setLoading(false)
     }
-    fetchServices()
+    fetchData()
   }, [])
 
   const getServiceEmoji = (name) => {
@@ -81,6 +84,27 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Before/After Gallery */}
+      {beforeAfter.length > 0 && (
+        <section style={{ padding: '32px 16px', background: '#fff' }}>
+          <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+            <h2 style={{ textAlign: 'center', fontSize: '24px', marginBottom: '20px', color: '#3D3D3D' }}>Before / After</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px' }}>
+              {beforeAfter.map((item, idx) => (
+                <div key={idx} style={{ borderRadius: '12px', overflow: 'hidden', position: 'relative' }}>
+                  <img src={item.image_url} alt={item.title || 'Before After'} style={{ width: '100%', height: '150px', objectFit: 'cover' }} />
+                  {item.title && (
+                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '8px', fontSize: '11px', textAlign: 'center' }}>
+                      {item.title}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Services */}
       <section style={{ padding: '32px 16px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
@@ -104,6 +128,32 @@ export default function Home() {
               ))}
             </div>
           )}
+        </div>
+      </section>
+
+      {/* Location / Google Maps */}
+      <section style={{ padding: '32px 16px', background: '#FAF8F5' }}>
+        <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'center' }}>
+          <h2 style={{ fontSize: '24px', marginBottom: '16px', color: '#3D3D3D' }}>📍 位置</h2>
+          <p style={{ color: '#666', marginBottom: '16px', fontSize: '14px' }}>九龍旺角彌敦道555號銀行中心A座</p>
+          <div style={{ borderRadius: '12px', overflow: 'hidden', marginBottom: '12px' }}>
+            <iframe 
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3610.494687583432!2d114.17319707677454!3d22.31930237459328!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x340400459e937f5d%3A0x3058e714c8536c06!2z5p6x5Lqs5aSn5riv5ZCI5ZCI6aaZ5riv!5e0!3m2!1szh-TW!2shk!4v1700000000000!5m2!1szh-TW!2shk"
+              width="100%" 
+              height="250" 
+              style={{ border: 0 }} 
+              allowFullScreen="" 
+              loading="lazy"
+            />
+          </div>
+          <a 
+            href="https://maps.google.com/?q=旺角彌敦道555號銀行中心" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            style={{ display: 'inline-block', padding: '10px 20px', background: '#fff', color: '#A68B6A', border: '1px solid #A68B6A', borderRadius: '8px', textDecoration: 'none', fontSize: '14px' }}
+          >
+            Google Maps 開啟
+          </a>
         </div>
       </section>
 
@@ -136,6 +186,32 @@ export default function Home() {
           <Link href="/booking" style={{ display: 'inline-block', padding: '14px 32px', background: 'linear-gradient(135deg, #A68B6A, #8B7355)', color: '#fff', borderRadius: '8px', textDecoration: 'none', fontWeight: 600, fontSize: '15px' }}>立即預約</Link>
         </div>
       </section>
+
+      {/* WhatsApp Floating Button */}
+      <a 
+        href="https://wa.me/85212345678"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          position: 'fixed',
+          bottom: '20px',
+          left: '20px',
+          zIndex: 1000,
+          width: '56px',
+          height: '56px',
+          background: '#25D366',
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+          textDecoration: 'none'
+        }}
+      >
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.464 1.065 2.945 1.04 3.086.034.149.269.298.596.447.151.015.342.015.465.008.121-.007.397-.026.565-.146.172-.124.435-.304.61-.45.181-.15.302-.249.434-.34.132-.091.264-.15.37-.149.108.001.37.01.569.008.199-.002.53-.002.77-.007.239-.005.475-.011.681-.001.206.009.526.053.747.301.221.249.385.571.398.649v.032c-.007.007-.019.027-.033.054-.015.028-.03.056-.046.083-.15.273-.323.545-.49.838-.181.297-.302.595-.42.908-.119.314-.084.555-.063.752-.021.196-.019.347.013.52.031.174.061.348.121.523l-.024.131c-.087.457-.264.919-.558 1.272-.295.353-.613.688-.988.918-.375.23-.775.398-1.243.496-.467.099-1.003.077-1.377.028-.375-.049-.728-.196-1.042-.436-.314-.24-.589-.539-.825-.818-.236-.279-.454-.581-.659-.879l-.137-.197c-.033-.053-.066-.106-.099-.159-.236-.376-.398-.771-.398-1.217 0-.446.116-.877.348-1.257.232-.38.581-.696 1.023-.958.442-.262.957-.398 1.481-.398.524 0 1.028.136 1.482.408.454.272.834.645 1.204 1.017.37.372.715.755 1.005 1.192.29.437.548.9.696 1.383.014.047.021.095.028.143.007.048.007.096.004.144l-.029.15z"/>
+        </svg>
+      </a>
     </>
   )
 }
