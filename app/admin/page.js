@@ -441,10 +441,12 @@ export default function Admin() {
               <div style={{ flex: 1 }}>
                 {selectedStaff ? (
                   <div style={{ background: '#fff', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+                    {/* Basic Info */}
                     <div style={{ padding: '20px', borderBottom: '1px solid #f0f0f0' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <div style={{ width: '70px', height: '70px', borderRadius: '50%', background: selectedStaff.enabled ? '#A68B6A' : '#ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '28px', fontWeight: 700 }}>
-                          {selectedStaff.name?.charAt(0) || '?'}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
+                        {/* Photo Preview */}
+                        <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: selectedStaff.photo_url ? `url(${selectedStaff.photo_url}) center/cover` : (selectedStaff.enabled ? '#A68B6A' : '#ccc'), display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '28px', fontWeight: 700, overflow: 'hidden', flexShrink: 0 }}>
+                          {!selectedStaff.photo_url && (selectedStaff.name?.charAt(0) || '?')}
                         </div>
                         <div style={{ flex: 1 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
@@ -465,6 +467,19 @@ export default function Admin() {
                           <button onClick={() => { if(confirm('確定刪除此員工？')) { deleteStaff(selectedStaff.id) }}} style={{ padding: '8px 14px', background: '#fef2f2', color: '#ef4444', border: 'none', borderRadius: '6px', fontSize: '13px' }}>🗑️ 刪除</button>
                         </div>
                       </div>
+                      
+                      {/* Photo URL */}
+                      <div style={{ marginBottom: '12px' }}>
+                        <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: '#666' }}>相片 URL</label>
+                        <input type="text" value={selectedStaff.photo_url || ''} onChange={e => updateStaffField(selectedStaff.id, 'photo_url', e.target.value)} placeholder="https://example.com/photo.jpg" style={{ width: '100%', padding: '10px', border: '1px solid #eee', borderRadius: '8px', fontSize: '13px' }} />
+                      </div>
+                      
+                      {/* Bio */}
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: '#666' }}>個人簡介</label>
+                        <textarea value={selectedStaff.bio || ''} onChange={e => updateStaffField(selectedStaff.id, 'bio', e.target.value)} placeholder="簡單介紹呢位髮型師..." style={{ width: '100%', padding: '10px', border: '1px solid #eee', borderRadius: '8px', fontSize: '13px', minHeight: '80px', resize: 'vertical' }} />
+                      </div>
+                    </div>
                     </div>
                     <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0', background: '#fafafa' }}>
                       <div style={{ fontSize: '14px', color: '#666', marginBottom: '12px', fontWeight: 500 }}>可提供服務</div>
@@ -568,8 +583,8 @@ export default function Admin() {
             <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ padding: '8px', border: '1px solid #ddd', borderRadius: '6px' }}><option value="all">全部</option><option value="pending">待確認</option><option value="confirmed">已確認</option></select>
           </div>
           <div style={{ background: '#fff', borderRadius: '10px', overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}><thead><tr style={{ background: '#FAF8F5' }}><th style={{ padding: '8px', textAlign: 'left' }}>日期</th><th style={{ padding: '8px', textAlign: 'left' }}>客戶</th><th style={{ padding: '8px', textAlign: 'left' }}>服務</th><th style={{ padding: '8px', textAlign: 'left' }}>髮型師</th><th style={{ padding: '8px', textAlign: 'left' }}>狀態</th></tr></thead>
-            <tbody>{filteredBookings.slice(0, 30).map(b => <tr key={b.id} onClick={() => setSelectedBooking(b)} style={{ borderBottom: '1px solid #f5f5f5', cursor: 'pointer' }}><td style={{ padding: '8px' }}>{b.date}<div style={{ fontSize: '10px', color: '#999' }}>{b.time}</div></td><td style={{ padding: '8px' }}>{b.name}<div style={{ fontSize: '10px', color: '#999' }}>{b.phone}</div></td><td style={{ padding: '8px', fontSize: '11px' }}>{b.service}</td><td style={{ padding: '8px' }}>{b.staff_name || '-'}</td><td style={{ padding: '8px' }}><span style={{ padding: '4px 8px', background: b.status === 'pending' ? '#fef3c7' : b.status === 'confirmed' ? '#dbeafe' : '#dcfce7', borderRadius: '4px', fontSize: '10px' }}>{b.status === 'pending' ? '待確認' : b.status === 'confirmed' ? '已確認' : '已完成'}</span></td></tr>)}</tbody></table>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}><thead><tr style={{ background: '#FAF8F5' }}><th style={{ padding: '8px', textAlign: 'left' }}>日期</th><th style={{ padding: '8px', textAlign: 'left' }}>服務</th><th style={{ padding: '8px', textAlign: 'left' }}>髮型師</th><th style={{ padding: '8px', textAlign: 'left' }}>狀態</th></tr></thead>
+            <tbody>{filteredBookings.slice(0, 30).map(b => <tr key={b.id} onClick={() => setSelectedBooking(b)} style={{ borderBottom: '1px solid #f5f5f5', cursor: 'pointer' }}><td style={{ padding: '8px' }}>{b.date}<div style={{ fontSize: '10px', color: '#999' }}>{b.time}</div></td><td style={{ padding: '8px' }}>{b.name}<div style={{ fontSize: '10px', color: '#999' }}>{b.phone}</div></td><td style={{ padding: '8px', fontSize: '>{b.service}</td><td style={{ padding: '8px' }}>{b.staff11px' }}_name || '-'}</td><td style={{ padding: '8px' }}><span style={{ padding: '4px 8px', background: b.status === 'pending' ? '#fef3c7' : b.status === 'confirmed' ? '#dbeafe' : b.status === 'completed' ? '#dcfce7' : b.status === 'cancelled' ? '#fee2e2' : '#f3f4f6', borderRadius: '4px', fontSize: '10px' }}>{b.status === 'pending' ? '待確認' : b.status === 'confirmed' ? '已確認' : b.status === 'completed' ? '已完成' : b.status === 'cancelled' ? '已取消' : '未到'}</span></td></tr>)}</tbody></table>
           </div>
         </div>}
 
@@ -595,6 +610,8 @@ export default function Admin() {
                     <option value="pending">待確認</option>
                     <option value="confirmed">已確認</option>
                     <option value="completed">已完成</option>
+                    <option value="cancelled">已取消</option>
+                    <option value="no_show">未到</option>
                   </select>
                 </div>
               </div>
