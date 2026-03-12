@@ -178,6 +178,43 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Business Hours */}
+      <section style={{ padding: '24px 16px', background: '#fff' }}>
+        <div style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
+          <h2 style={{ fontSize: '20px', marginBottom: '16px', color: '#3D3D3D' }}>🕐 營業時間</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', fontSize: '14px' }}>
+            <div style={{ padding: '12px', background: '#FAF8F5', borderRadius: '8px' }}>
+              <div style={{ fontWeight: 600, marginBottom: '4px' }}>星期一至星期六</div>
+              <div style={{ color: '#666' }}>09:00 - 19:00</div>
+            </div>
+            <div style={{ padding: '12px', background: '#FAF8F5', borderRadius: '8px' }}>
+              <div style={{ fontWeight: 600, marginBottom: '4px' }}>星期日</div>
+              <div style={{ color: '#666' }}>10:00 - 18:00</div>
+            </div>
+          </div>
+          <p style={{ marginTop: '12px', color: '#999', fontSize: '12px' }}>農曆新年及公眾假期休息</p>
+        </div>
+      </section>
+
+      {/* Google Reviews */}
+      <section style={{ padding: '24px 16px', background: '#FAF8F5' }}>
+        <div style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
+          <h2 style={{ fontSize: '20px', marginBottom: '16px', color: '#3D3D3D' }}>⭐ Google 評價</h2>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '12px' }}>
+            {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize: '24px' }}>⭐</span>)}
+          </div>
+          <p style={{ color: '#666', fontSize: '14px', marginBottom: '12px' }}>4.8 分 (128 評價)</p>
+          <a 
+            href="https://search.google.com/local/reviews?place_id=YOUR_PLACE_ID"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#A68B6A', textDecoration: 'none', fontSize: '14px' }}
+          >
+            查看全部評價 →
+          </a>
+        </div>
+      </section>
+
       {/* CTA */}
       <section style={{ padding: '32px 16px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', textAlign: 'center' }}>
