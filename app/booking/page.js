@@ -18,6 +18,7 @@ export default function Booking() {
   const [bookingRef, setBookingRef] = useState('')
   const [staffList, setStaffList] = useState([])
   const [bookings, setBookings] = useState([])
+  const [occupiedSlots, setOccupiedSlots] = useState([])
   const [selectedStaff, setSelectedStaff] = useState('')
   const [loading, setLoading] = useState(true)
 
@@ -64,6 +65,38 @@ export default function Booking() {
     }
     fetchData()
   }, [])
+
+  // Refetch bookings when date changes
+  useEffect(() => {
+    async function refetchBookings() {
+      const { data } = await supabase.from('bookings').select('*')
+      if (data) setBookings(data)
+    }
+    if (selectedDate) {
+      refetchBookings()
+    }
+  }, [selectedDate])
+
+  // Fetch occupied time slots when date is selected
+  useEffect(() => {
+    async function fetchOccupiedSlots() {
+      if (!selectedDate) {
+        setOccupiedSlots([])
+        return
+      }
+      const dateStr = `${selectedDate}/${currentMonth + 1}/${currentYear}`
+      const { data } = await supabase
+        .from('bookings')
+        .select('time')
+        .eq('date', dateStr)
+        .in('status', ['pending', 'confirmed'])
+      
+      if (data) {
+        setOccupiedSlots(data.map(b => b.time))
+      }
+    }
+    fetchOccupiedSlots()
+  }, [selectedDate, currentMonth, currentYear])
 
   // When staff is selected, filter services they can provide
   useEffect(() => {
@@ -180,6 +213,20 @@ export default function Booking() {
       return
     }
 
+    // Double booking check - query database before insert
+    const dateStr = `${selectedDate}/${currentMonth + 1}/${currentYear}`
+    const { data: existingBookings } = await supabase
+      .from('bookings')
+      .select('id')
+      .eq('date', dateStr)
+      .eq('time', selectedTime)
+      .in('status', ['pending', 'confirmed'])
+
+    if (existingBookings && existingBookings.length > 0) {
+      alert('此時段已被預約，請選擇其他時間')
+      return
+    }
+
     const ref = 'VIVA' + Date.now().toString().slice(-6)
     
     const booking = {
@@ -206,6 +253,11 @@ export default function Booking() {
     if (error) {
       alert('錯誤: ' + JSON.stringify(error))
       return
+    }
+
+    // Update bookings state for blocking
+    if (data && data[0]) {
+      setBookings([...bookings, data[0]])
     }
 
     alert('預約成功！')
@@ -357,19 +409,21 @@ export default function Booking() {
 
           {/* Time Slots */}
           <div style={{ marginTop: '16px' }}>
-            <h4 style={{ marginBottom: '10px', fontSize: '15px' }}>選擇時間</h4>
+            <h4 style={{ marginBottom: '10px', fontSize: '15px' }}>選擇時間 {!selectedDate && '(請先選擇日期)'}</h4>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
-              {timeSlots.map(time => (
+              {timeSlots.map(time => {
+                const isOccupied = occupiedSlots.includes(time)
+                return (
                 <div
                   key={time}
-                  onClick={() => setSelectedTime(time)}
+                  onClick={() => !isOccupied && setSelectedTime(time)}
                   style={{
                     padding: '14px',
-                    background: selectedTime === time ? '#A68B6A' : '#fff',
-                    color: selectedTime === time ? '#fff' : '#333',
-                    border: '1px solid ' + (selectedTime === time ? '#A68B6A' : '#e5e7eb'),
+                    background: selectedTime === time ? '#A68B6A' : isOccupied ? '#f5f5f5' : '#fff',
+                    color: selectedTime === time ? '#fff' : isOccupied ? '#ccc' : '#333',
+                    border: '1px solid ' + (selectedTime === time ? '#A68B6A' : isOccupied ? '#eee' : '#e5e7eb'),
                     borderRadius: '8px',
-                    cursor: 'pointer',
+                    cursor: isOccupied ? 'not-allowed' : 'pointer',
                     textAlign: 'center',
                     fontSize: '15px',
                     fontWeight: 500,
@@ -379,9 +433,9 @@ export default function Booking() {
                     justifyContent: 'center'
                   }}
                 >
-                  {time}
+                  {isOccupied ? `${time} (已滿)` : time}
                 </div>
-              ))}
+              )})}
             </div>
           </div>
 
