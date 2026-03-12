@@ -1,26 +1,54 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { supabase } from '../../lib/supabase'
+
 export default function Articles() {
-  const articles = [
-    { id: 1, title: '如何選擇適合自己的髮型？', category: '髮型貼士', date: '2026-03-01', excerpt: '根據臉型、髮質同埋個人風格嚟選擇最適合既髮型...' },
-    { id: 2, title: '護髮小知識 - 你要知既5件事', category: '護髮知識', date: '2026-02-25', excerpt: '日常護髮既錯誤示範同正確方法...' },
-    { id: 3, title: '脫髮原因同改善方法', category: '头皮護理', date: '2026-02-20', excerpt: '點解會甩頭髮？等我哋教你點樣改善...' },
-  ]
+  const [articles, setArticles] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchArticles() {
+      setLoading(true)
+      const { data } = await supabase.from('articles').select('*').eq('enabled', true).order('sort_order')
+      if (data) setArticles(data)
+      setLoading(false)
+    }
+    fetchArticles()
+  }, [])
+
+  if (loading) {
+    return <div style={{ padding: '40px', textAlign: 'center' }}>載入中...</div>
+  }
 
   return (
     <>
-      <section style={{ padding: '30px 16px', background: '#FAF8F5', textAlign: 'center' }}>
-        <h1 style={{ fontSize: '28px', color: '#3D3D3D' }}>文章<span style={{ color: '#A68B6A' }}>分享</span></h1>
+      <section style={{ padding: '30px 16px', minHeight: 'auto', background: '#FAF8F5' }}>
+        <div style={{ textAlign: 'center' }}>
+          <h1 style={{ fontSize: '28px', color: '#3D3D3D' }}>文章<span style={{ color: '#A68B6A' }}>資訊</span></h1>
+        </div>
       </section>
 
       <section style={{ padding: '24px 12px' }}>
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          {articles.map(article => (
-            <div key={article.id} style={{ background: '#fff', borderRadius: '12px', padding: '16px', marginBottom: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
-              <span style={{ fontSize: '11px', color: '#A68B6A', fontWeight: 600 }}>{article.category}</span>
-              <h2 style={{ fontSize: '17px', margin: '8px 0' }}>{article.title}</h2>
-              <p style={{ color: '#666', marginBottom: '10px', fontSize: '14px' }}>{article.excerpt}</p>
-              <span style={{ fontSize: '11px', color: '#999' }}>{article.date}</span>
+          {articles.length === 0 ? (
+            <p style={{ textAlign: 'center', color: '#999', padding: '40px' }}>暫時沒有文章</p>
+          ) : (
+            <div style={{ display: 'grid', gap: '16px' }}>
+              {articles.map(article => (
+                <Link key={article.id} href={`/articles/${article.id}`} style={{ textDecoration: 'none' }}>
+                  <div style={{ background: '#fff', border: '1px solid #E8E0D5', borderRadius: '12px', padding: '16px', cursor: 'pointer' }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px', color: '#333' }}>{article.title}</h3>
+                    <p style={{ fontSize: '13px', color: '#666', marginBottom: '8px' }}>{article.excerpt}</p>
+                    {article.category && (
+                      <span style={{ fontSize: '11px', color: '#A68B6A', background: '#FAF8F5', padding: '4px 8px', borderRadius: '4px' }}>{article.category}</span>
+                    )}
+                  </div>
+                </Link>
+              ))}
             </div>
-          ))}
+          )}
         </div>
       </section>
     </>
