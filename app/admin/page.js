@@ -1042,7 +1042,18 @@ const normalizeNullableNumber = (value) => {
       for (const row of activeRows) {
         const payload = stripTransientFields(row)
         const originalId = payload.id
+        const imageUrl = String(payload.image_url || '').trim()
 
+        if (!String(payload.name || '').trim()) {
+          throw new Error('請先填寫服務名稱')
+        }
+
+        if (!imageUrl) {
+          throw new Error('新增或儲存服務前，請先填寫圖片 URL')
+        }
+
+        payload.name = String(payload.name || '').trim()
+        payload.image_url = imageUrl
         payload.price = Number(payload.price || 0)
         payload.time = Number(payload.time || 60)
         payload.buffer_min = Number(payload.buffer_min || 0)
