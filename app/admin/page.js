@@ -1049,7 +1049,7 @@ const normalizeNullableNumber = (value) => {
         }
 
         if (!imageUrl) {
-          throw new Error('新增或儲存服務前，請先填寫圖片 URL')
+          throw new Error('新增或儲存服務前，請先上載服務圖片或填寫圖片 URL')
         }
 
         payload.name = String(payload.name || '').trim()
