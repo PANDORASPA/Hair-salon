@@ -219,6 +219,13 @@ export default function ServicesTab({
   }
 
   const handleSave = async () => {
+    const missingImageService = services.find((service) => !service?.__deleted && !String(service?.image_url || '').trim())
+    if (missingImageService) {
+      window.alert(`請先為「${missingImageService.name || '未命名服務'}」填寫圖片 URL`)
+      setSelectedServiceId(missingImageService.id)
+      return
+    }
+
     setSaving(true)
     try {
       await saveServices({
@@ -345,7 +352,7 @@ export default function ServicesTab({
                   <input type="number" value={selectedService.sort_order} onChange={(event) => updateService(selectedService.id, (item) => ({ ...item, sort_order: Number(event.target.value || 0) }))} style={fieldStyle} />
                 </SectionField>
                 <SectionField label="圖片 URL" hint="可留空，維持現有圖片來源。">
-                  <input value={selectedService.image_url || ''} onChange={(event) => updateService(selectedService.id, (item) => ({ ...item, image_url: event.target.value }))} style={fieldStyle} />
+                  <input required value={selectedService.image_url || ''} onChange={(event) => updateService(selectedService.id, (item) => ({ ...item, image_url: event.target.value }))} style={fieldStyle} />
                 </SectionField>
                 <SectionField label="狀態">
                   <select value={selectedService.enabled ? 'enabled' : 'hidden'} onChange={(event) => updateService(selectedService.id, (item) => ({ ...item, enabled: event.target.value === 'enabled' }))} style={fieldStyle}>
