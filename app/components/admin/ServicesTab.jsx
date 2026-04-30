@@ -104,6 +104,7 @@ export default function ServicesTab({
   const [deletedServiceProviderGroupIds, setDeletedServiceProviderGroupIds] = useState([])
   const [deletedServiceResourceIds, setDeletedServiceResourceIds] = useState([])
   const [saving, setSaving] = useState(false)
+  const [uploadingServiceId, setUploadingServiceId] = useState(null)
   const [selectedServiceId, setSelectedServiceId] = useState(null)
 
   useEffect(() => {
@@ -215,6 +216,32 @@ export default function ServicesTab({
     setter((current) => current.filter((row) => row.id !== id))
     if (isPersisted(id)) {
       deletedSetter((current) => (current.includes(id) ? current : [...current, id]))
+    }
+  }
+
+  const handleImageUpload = async (serviceId, file) => {
+    if (!file) return
+
+    const service = services.find((item) => item.id === serviceId)
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('serviceName', service?.name || 'service')
+
+    setUploadingServiceId(serviceId)
+    try {
+      const response = await fetch('/api/admin/service-images', {
+        method: 'POST',
+        body: formData,
+      })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(result?.error || '圖片上載失敗')
+      }
+      updateService(serviceId, (item) => ({ ...item, image_url: result.url }))
+    } catch (error) {
+      window.alert(error?.message || '圖片上載失敗')
+    } finally {
+      setUploadingServiceId(null)
     }
   }
 
@@ -351,8 +378,37 @@ export default function ServicesTab({
                 <SectionField label="排序">
                   <input type="number" value={selectedService.sort_order} onChange={(event) => updateService(selectedService.id, (item) => ({ ...item, sort_order: Number(event.target.value || 0) }))} style={fieldStyle} />
                 </SectionField>
-                <SectionField label="圖片 URL" hint="可留空，維持現有圖片來源。">
-                  <input required value={selectedService.image_url || ''} onChange={(event) => updateService(selectedService.id, (item) => ({ ...item, image_url: event.target.value }))} style={fieldStyle} />
+                <SectionField label="服務圖片" hint="可直接上載圖片，系統會自動填入圖片 URL；亦可手動貼上外部圖片 URL。">
+                  <div style={{ display: 'grid', gap: '8px' }}>
+                    <input
+                      required
+                      value={selectedService.image_url || ''}
+                      onChange={(event) => updateService(selectedService.id, (item) => ({ ...item, image_url: event.target.value }))}
+                      placeholder="上載後會自動填入圖片 URL"
+                      style={fieldStyle}
+                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <label className="btn btn-small btn-interactive" style={{ cursor: uploadingServiceId === selectedService.id ? 'not-allowed' : 'pointer', opacity: uploadingServiceId === selectedService.id ? 0.7 : 1 }}>
+                        {uploadingServiceId === selectedService.id ? '上載中...' : '上載圖片'}
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp,image/gif"
+                          disabled={uploadingServiceId === selectedService.id}
+                          onChange={(event) => {
+                            const file = event.target.files?.[0]
+                            event.target.value = ''
+                            handleImageUpload(selectedService.id, file)
+                          }}
+                          style={{ display: 'none' }}
+                        />
+                      </label>
+                      {selectedService.image_url ? (
+                        <a href={selectedService.image_url} target="_blank" rel="noreferrer" style={{ fontSize: '12px', color: '#8B7355', fontWeight: 800 }}>
+                          預覽圖片
+                        </a>
+                      ) : null}
+                    </div>
+                  </div>
                 </SectionField>
                 <SectionField label="狀態">
                   <select value={selectedService.enabled ? 'enabled' : 'hidden'} onChange={(event) => updateService(selectedService.id, (item) => ({ ...item, enabled: event.target.value === 'enabled' }))} style={fieldStyle}>
