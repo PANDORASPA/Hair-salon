@@ -70,7 +70,7 @@ function AdminLoginInner() {
         if (!profile) {
           throw new Error('找不到對應的會員資料，請先確認此帳號是否已完成註冊。')
         }
-        throw new Error('此帳號未開通管理員權限。')
+        throw new Error('此帳號尚未開通管理員權限。')
       }
 
       toast.success('管理員登入成功')
@@ -102,6 +102,9 @@ function AdminLoginInner() {
               <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px' }}>管理員電郵</label>
               <input
                 type="email"
+                name="email"
+                autoComplete="email"
+                inputMode="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 required
@@ -113,6 +116,8 @@ function AdminLoginInner() {
               <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px' }}>密碼</label>
               <input
                 type="password"
+                name="password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 required
