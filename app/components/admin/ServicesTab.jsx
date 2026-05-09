@@ -246,9 +246,9 @@ export default function ServicesTab({
   }
 
   const handleSave = async () => {
-    const missingImageService = services.find((service) => !service?.__deleted && !String(service?.image_url || '').trim())
+    const missingImageService = services.find((service) => service?.__isNew && !service?.__deleted && !String(service?.image_url || '').trim())
     if (missingImageService) {
-      window.alert(`請先為「${missingImageService.name || '未命名服務'}」上載圖片或填寫圖片 URL`)
+      window.alert(`新增服務「${missingImageService.name || '未命名服務'}」前，請先上載圖片或填寫圖片 URL`)
       setSelectedServiceId(missingImageService.id)
       return
     }
