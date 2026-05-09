@@ -681,7 +681,7 @@ export default function SchedulingTab({
         }
       }
 
-      const savedStaff = await runSaveStep('服務供應者資料', () => onSave?.(selectedStaff.id, { silentSuccess: true }))
+      const savedStaff = await runSaveStep('服務供應者資料', () => onSave?.(selectedStaff.id, { silentSuccess: true, deferRefresh: true }))
       const resolvedStaffId = Number(savedStaff?.id || selectedStaff.id)
       const remapRows = (rows) =>
         (rows || []).map((row) =>
