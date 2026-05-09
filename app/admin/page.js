@@ -33,6 +33,12 @@ const scheduleTableLabels = {
   blocked_slots: '封鎖時段',
 }
 
+const formatScheduleIssues = (issues = []) =>
+  (issues || [])
+    .map((issue) => String(issue?.message || issue || '').trim())
+    .filter(Boolean)
+    .join('；') || '排班設定未能保存，請檢查日期與時間。'
+
 const WEEKDAY_LABELS = {
   '0': '星期日',
   '1': '星期一',
