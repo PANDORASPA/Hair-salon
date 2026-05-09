@@ -5,7 +5,6 @@ import {
   buildBookingPayload,
   buildResourceAllocationPayload,
   loadPhase2Context,
-  normalizeOptionalNumber,
   Phase2Error,
   validatePhase2Selection,
 } from '../../../../../lib/booking/phase2'
@@ -259,7 +258,6 @@ export async function PATCH(request, { params }) {
     const existingCoupon = String(existingBooking.coupon || '').trim() || null
     const requestedTicketId = parseOptionalTicketId(body?.userTicketId)
     const existingTicketId = parseOptionalTicketId(existingBooking.user_ticket_id)
-    const requestedLocationId = normalizeOptionalNumber(body?.locationId || existingBooking.location_id)
 
     if (!dateISO || !/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
       return NextResponse.json({ error: 'Invalid appointment date.' }, { status: 400 })
@@ -290,9 +288,10 @@ export async function PATCH(request, { params }) {
       supabase,
       dateISO,
       serviceId,
-      requestedLocationId,
+      requestedLocationId: null,
       requestedStaffId: staffIdInput,
       excludeBookingId: bookingId,
+      ignoreLocationProviderRules: true,
     })
     const { chosenStaff } = validatePhase2Selection(context, { startTime, requestedStaffId: staffIdInput })
 
@@ -306,7 +305,7 @@ export async function PATCH(request, { params }) {
       durationMin: context.durationMin,
       bufferMin: context.bufferMin,
       locationId: context.resolvedLocationId,
-      providerGroupId: context.requiredProviderGroupIds[0] || existingBooking.provider_group_id || null,
+      providerGroupId: context.requiredProviderGroupIds[0] || null,
       customerName,
       customerPhone,
       coupon: existingBooking.coupon || null,
