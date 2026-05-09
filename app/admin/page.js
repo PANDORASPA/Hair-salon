@@ -620,8 +620,8 @@ const normalizeNullableNumber = (value) => {
     if (table === 'staff_time_off') {
       payload.is_all_day = Boolean(payload.is_all_day)
       if (payload.is_all_day) {
-        payload.start_time = null
-        payload.end_time = null
+        payload.start_time = '00:00'
+        payload.end_time = '23:59'
       } else {
         const nextStart = typeof payload.start_time === 'string' ? payload.start_time.trim() : payload.start_time
         const nextEnd = typeof payload.end_time === 'string' ? payload.end_time.trim() : payload.end_time
@@ -642,8 +642,8 @@ const normalizeNullableNumber = (value) => {
     if (table === 'staff_time_off' && row?.is_all_day) {
       return {
         ...row,
-        start_time: null,
-        end_time: null,
+        start_time: '00:00',
+        end_time: '23:59',
       }
     }
     if (row?.is_off) return row
@@ -674,8 +674,8 @@ const normalizeNullableNumber = (value) => {
       if (row?.is_all_day) {
         return {
           ...row,
-          start_time: null,
-          end_time: null,
+          start_time: '00:00',
+          end_time: '23:59',
         }
       }
       return validateTimeBoundRowStrict({ row, label })
@@ -734,6 +734,75 @@ const normalizeNullableNumber = (value) => {
     }
   }
 
+  const normalizeReadbackTime = (value) => (value == null || value === '' ? null : String(value).slice(0, 5))
+
+  const scheduleRowMatchesReadback = (table, expected, actual) => {
+    if (!expected || !actual) return false
+    if (Number(expected.staff_id) !== Number(actual.staff_id)) return false
+
+    if (table === 'staff_shifts') {
+      return (
+        String(expected.date || '').slice(0, 10) === String(actual.date || '').slice(0, 10) &&
+        Boolean(expected.is_off) === Boolean(actual.is_off) &&
+        normalizeReadbackTime(expected.start_time) === normalizeReadbackTime(actual.start_time) &&
+        normalizeReadbackTime(expected.end_time) === normalizeReadbackTime(actual.end_time)
+      )
+    }
+
+    if (table === 'staff_breaks') {
+      return (
+        Number(expected.day_of_week) === Number(actual.day_of_week) &&
+        normalizeReadbackTime(expected.start_time) === normalizeReadbackTime(actual.start_time) &&
+        normalizeReadbackTime(expected.end_time) === normalizeReadbackTime(actual.end_time)
+      )
+    }
+
+    if (table === 'staff_time_off') {
+      return (
+        String(expected.date || '').slice(0, 10) === String(actual.date || '').slice(0, 10) &&
+        Boolean(expected.is_all_day) === Boolean(actual.is_all_day) &&
+        normalizeReadbackTime(expected.start_time) === normalizeReadbackTime(actual.start_time) &&
+        normalizeReadbackTime(expected.end_time) === normalizeReadbackTime(actual.end_time)
+      )
+    }
+
+    if (table === 'blocked_slots') {
+      return (
+        String(expected.date || '').slice(0, 10) === String(actual.date || '').slice(0, 10) &&
+        normalizeReadbackTime(expected.start_time) === normalizeReadbackTime(actual.start_time) &&
+        normalizeReadbackTime(expected.end_time) === normalizeReadbackTime(actual.end_time) &&
+        String(expected.reason || '').trim() === String(actual.reason || '').trim()
+      )
+    }
+
+    return false
+  }
+
+  const verifyScheduleReadback = async (table, rows = []) => {
+    const expectedRows = (rows || []).filter((row) => row?.staff_id)
+    if (expectedRows.length === 0) return
+
+    for (const expected of expectedRows) {
+      let query = supabase.from(table).select('*').eq('staff_id', Number(expected.staff_id))
+      if (table === 'staff_shifts') {
+        query = query.eq('date', String(expected.date || '').slice(0, 10))
+      } else if (table === 'staff_breaks') {
+        query = query.eq('day_of_week', Number(expected.day_of_week))
+      } else if (table === 'staff_time_off') {
+        query = query.eq('date', String(expected.date || '').slice(0, 10))
+      } else if (table === 'blocked_slots') {
+        query = query.eq('date', String(expected.date || '').slice(0, 10))
+      }
+
+      const { data, error } = await query
+      if (error) throw error
+      const matched = (data || []).some((actual) => scheduleRowMatchesReadback(table, expected, actual))
+      if (!matched) {
+        throw new Error(`${scheduleTableLabels[table] || table}保存後讀回失敗，請重新整理後再檢查。`)
+      }
+    }
+  }
+
   const saveShifts = async (payloadOrRows, options = {}) => {
     const silentSuccess = Boolean(options?.silentSuccess)
     try {
@@ -768,6 +837,7 @@ const normalizeNullableNumber = (value) => {
         if (deleteError) throw deleteError
       }
 
+      await verifyScheduleReadback('staff_shifts', payload)
       await bumpAvailabilityCacheVersion()
       await refreshStaffTableState('staff_shifts')
       if (!silentSuccess) toast.success('已儲存班次')
@@ -790,8 +860,8 @@ const normalizeNullableNumber = (value) => {
           if (table === 'staff_time_off') {
             payload.is_all_day = Boolean(payload.is_all_day)
             if (payload.is_all_day) {
-              payload.start_time = null
-              payload.end_time = null
+              payload.start_time = '00:00'
+              payload.end_time = '23:59'
             } else {
               payload.start_time =
                 typeof payload.start_time === 'string' && payload.start_time.trim()
@@ -863,6 +933,7 @@ const normalizeNullableNumber = (value) => {
         if (error) throw error
       }
 
+      await verifyScheduleReadback(table, normalizedRows)
       await bumpAvailabilityCacheVersion()
       await refreshStaffTableState(table)
       if (!silentSuccess) toast.success(`已儲存${scheduleTableLabels[table] || '排班設定'}`)
@@ -1041,6 +1112,7 @@ const normalizeNullableNumber = (value) => {
 
       const serviceIdMap = new Map()
       const activeRows = rows.filter((row) => !row?.__deleted)
+      const savedServiceChecks = []
 
       for (const row of activeRows) {
         const payload = stripTransientFields(row)
@@ -1076,6 +1148,27 @@ const normalizeNullableNumber = (value) => {
         const { data, error } = await supabase.from('services').upsert(payload).select('id').single()
         if (error) throw error
         serviceIdMap.set(String(originalId), data.id)
+        savedServiceChecks.push({
+          id: data.id,
+          name: payload.name,
+          image_url: payload.image_url,
+          requireImage: isNewService,
+        })
+      }
+
+      for (const expected of savedServiceChecks) {
+        const { data, error } = await supabase
+          .from('services')
+          .select('id,name,image_url')
+          .eq('id', expected.id)
+          .maybeSingle()
+        if (error) throw error
+        if (!data || String(data.name || '').trim() !== expected.name) {
+          throw new Error(`服務「${expected.name}」保存後讀回失敗，請重新整理後再檢查。`)
+        }
+        if (expected.requireImage && String(data.image_url || '').trim() !== String(expected.image_url || '').trim()) {
+          throw new Error(`服務「${expected.name}」的圖片保存後讀回失敗，請重新上載後再儲存。`)
+        }
       }
 
       const persistRelations = async ({ table, rows: relationRows, deletedIds: relationDeletedIds, mapper }) => {
