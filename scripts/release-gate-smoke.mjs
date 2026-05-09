@@ -31,6 +31,18 @@ const normalizeBaseUrl = (value) => {
   return text.replace('127.0.0.1', 'localhost')
 }
 const baseUrl = normalizeBaseUrl(baseUrlArg ? baseUrlArg.slice('--base-url='.length) : '')
+const baseUrlHost = (() => {
+  try {
+    return new URL(baseUrl).hostname
+  } catch {
+    return ''
+  }
+})()
+const supportsSmokeFaultInjection =
+  env.ALLOW_SMOKE_FAULTS === '1' ||
+  process.env.ALLOW_SMOKE_FAULTS === '1' ||
+  baseUrlHost === 'localhost' ||
+  baseUrlHost === '127.0.0.1'
 const futureDate = (offsetDays) => {
   const date = new Date()
   date.setUTCDate(date.getUTCDate() + offsetDays)
@@ -578,32 +590,51 @@ async function main() {
   })
   const afterReschedule = await fetchBookingSnapshot(createdBooking.id)
 
-  const rollbackTarget = await findSlot(smokeConfig.rollbackDate, location.id, smokeConfig.primaryStaffId, ['11:00', '11:15', '11:30', '12:00'])
-  if (!rollbackTarget.chosen) {
-    throw createStructuredError('No rollback target slot available for primary staff.', {
-      diagnostic_category: rollbackTarget.diagnosticCategory || 'seed_invalid',
-      rollback_target: {
-        date: smokeConfig.rollbackDate,
-        date_entry: rollbackTarget.dateEntry,
-        availability_status: rollbackTarget.availability?.status ?? null,
-        diagnostic_reason: rollbackTarget.diagnosticReason,
+  let rollbackTarget = null
+  let beforeRollback = await fetchBookingSnapshot(createdBooking.id)
+  let forcedRollback = {
+    status: null,
+    ok: false,
+    body: {
+      code: 'smoke_fault_injection_disabled',
+      error: 'Forced rollback smoke is skipped because the target does not allow smoke fault injection.',
+      details: {
+        baseUrl,
+        baseUrlHost,
+        reason: 'Set ALLOW_SMOKE_FAULTS=1 or run against localhost to exercise this destructive failure path.',
+      },
+    },
+  }
+  let afterRollback = beforeRollback
+
+  if (supportsSmokeFaultInjection) {
+    rollbackTarget = await findSlot(smokeConfig.rollbackDate, location.id, smokeConfig.primaryStaffId, ['11:00', '11:15', '11:30', '12:00'])
+    if (!rollbackTarget.chosen) {
+      throw createStructuredError('No rollback target slot available for primary staff.', {
+        diagnostic_category: rollbackTarget.diagnosticCategory || 'seed_invalid',
+        rollback_target: {
+          date: smokeConfig.rollbackDate,
+          date_entry: rollbackTarget.dateEntry,
+          availability_status: rollbackTarget.availability?.status ?? null,
+          diagnostic_reason: rollbackTarget.diagnosticReason,
+        },
+      })
+    }
+
+    beforeRollback = await fetchBookingSnapshot(createdBooking.id)
+    forcedRollback = await rescheduleBooking({
+      cookieHeader: memberCookie,
+      bookingId: createdBooking.id,
+      dateISO: smokeConfig.rollbackDate,
+      startTime: rollbackTarget.chosen,
+      locationId: location.id,
+      staffId: smokeConfig.primaryStaffId,
+      extraHeaders: {
+        'x-smoke-force-allocation-fail': '1',
       },
     })
+    afterRollback = await fetchBookingSnapshot(createdBooking.id)
   }
-
-  const beforeRollback = await fetchBookingSnapshot(createdBooking.id)
-  const forcedRollback = await rescheduleBooking({
-    cookieHeader: memberCookie,
-    bookingId: createdBooking.id,
-    dateISO: smokeConfig.rollbackDate,
-    startTime: rollbackTarget.chosen,
-    locationId: location.id,
-    staffId: smokeConfig.primaryStaffId,
-    extraHeaders: {
-      'x-smoke-force-allocation-fail': '1',
-    },
-  })
-  const afterRollback = await fetchBookingSnapshot(createdBooking.id)
 
   const ticketCreateBaseline = await findSlot(smokeConfig.ticketCancelDate, location.id, smokeConfig.primaryStaffId, ['09:00', '10:00', '11:00'])
   if (!ticketCreateBaseline.chosen) {
@@ -655,7 +686,9 @@ async function main() {
     beforeRollback.allocations.length === afterRollback.allocations.length &&
     afterRollback.allocations.length > 0
 
-  const rollbackStatus = !rollbackEvidenceReady
+  const rollbackStatus = !supportsSmokeFaultInjection
+    ? 'skipped'
+    : !rollbackEvidenceReady
     ? 'insufficient_evidence'
     : forcedRollback.status >= 500 && forcedRollback.body?.details?.rollbackVerified === true && rollbackRestored
       ? 'pass'
