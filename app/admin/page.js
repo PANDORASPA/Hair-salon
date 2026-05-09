@@ -966,6 +966,7 @@ const normalizeNullableNumber = (value) => {
 
   const saveStaff = async (targetStaffId = null, options = {}) => {
     const silentSuccess = Boolean(options?.silentSuccess)
+    const deferRefresh = Boolean(options?.deferRefresh)
     setSaving(true)
     try {
       const rowsToSave = targetStaffId == null ? staff : staff.filter((item) => item.id === targetStaffId)
@@ -1013,7 +1014,9 @@ const normalizeNullableNumber = (value) => {
         if (data) savedRows.push(data)
       }
       await bumpAvailabilityCacheVersion()
-      await refreshStaffTableState('staff')
+      if (!deferRefresh) {
+        await refreshStaffTableState('staff')
+      }
       if (!silentSuccess) toast.success('已儲存目前服務供應者')
       return targetStaffId == null ? savedRows : savedRows[0] || null
     } catch (error) {
@@ -1042,18 +1045,20 @@ const normalizeNullableNumber = (value) => {
       for (const row of activeRows) {
         const payload = stripTransientFields(row)
         const originalId = payload.id
+        const numericOriginalId = Number(originalId)
+        const isNewService = !Number.isInteger(numericOriginalId) || numericOriginalId <= 0 || numericOriginalId > 2147483647
         const imageUrl = String(payload.image_url || '').trim()
 
         if (!String(payload.name || '').trim()) {
           throw new Error('請先填寫服務名稱')
         }
 
-        if (!imageUrl) {
-          throw new Error('新增或儲存服務前，請先上載服務圖片或填寫圖片 URL')
+        if (isNewService && !imageUrl) {
+          throw new Error('新增服務前，請先上載服務圖片或填寫圖片 URL')
         }
 
         payload.name = String(payload.name || '').trim()
-        payload.image_url = imageUrl
+        payload.image_url = imageUrl || null
         payload.price = Number(payload.price || 0)
         payload.time = Number(payload.time || 60)
         payload.buffer_min = Number(payload.buffer_min || 0)
@@ -1066,7 +1071,7 @@ const normalizeNullableNumber = (value) => {
         payload.booking_mode = String(payload.booking_mode || 'staff')
         payload.enabled = payload.enabled !== false
 
-        if (typeof payload.id === 'number' && payload.id > 2147483647) delete payload.id
+        if (isNewService) delete payload.id
 
         const { data, error } = await supabase.from('services').upsert(payload).select('id').single()
         if (error) throw error
