@@ -1,25 +1,25 @@
 # PANDORA HEAD SPA
 
-PANDORA HEAD SPA is a head spa booking, member, package, Stripe payment, and admin management app built with Next.js and Supabase. The public positioning follows the Palace Hair Spa replacement direction: `Pandora Head Spa．全自助頭皮護理中心`.
+PANDORA HEAD SPA 是一個頭皮護理中心網站，包含前台預約、會員中心、套票購買與扣次、Stripe 付款、產品訂單，以及後台營運管理。網站定位為「PANDORA HEAD SPA｜全自助頭皮護理中心」，用作替代 Palace Hair Spa 舊網站的正式新站。
 
-## Current Scope
+## 目前功能範圍
 
-- Public pages for home, head spa services, packages, products, team, articles, FAQs, and booking entry points.
-- Supabase Auth for member login, registration, account access, booking ownership, and package visibility.
-- Server routes for availability, booking creation, product orders, package purchase, Stripe Checkout, webhook fulfilment, manual payment confirmation, and legacy package CSV import.
-- Admin dashboard for bookings, customers, services, staff, coupons, content, inventory, analytics, settings, package payment confirmation, and legacy package import.
+- 前台頁面：首頁、頭皮護理服務、套票、產品、團隊、文章、FAQ、預約入口。
+- 會員功能：Supabase Auth 登入 / 註冊、會員資料、會員預約、訂單、持有套票與扣次紀錄。
+- 後端流程：可預約時段、建立預約、產品訂單、套票購買、Stripe Checkout、Stripe webhook 發放套票、人工確認付款、舊套票 CSV 匯入。
+- 後台管理：預約、會員、服務、人員、套票、訂單、交易、庫存、優惠碼、文章、FAQ、設定中心、安全紀錄、套票付款確認與 CSV 匯入。
 
-## Local Development
+## 本機開發
 
-1. Install dependencies.
+1. 安裝套件。
 
 ```bash
 npm install
 ```
 
-2. Copy `.env.example` to `.env.local`.
+2. 複製 `.env.example` 成 `.env.local`。
 
-3. Fill in the required environment variables:
+3. 填入必要環境變數：
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
@@ -27,96 +27,95 @@ npm install
 - `NEXT_PUBLIC_SITE_URL`
 - `STRIPE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET`
-- `STRIPE_CURRENCY` (defaults to `hkd`)
+- `STRIPE_CURRENCY`，預設為 `hkd`
+- 如正式上線要跨 instance rate limit，另填 `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`
 
-4. Apply the canonical migrations in [`supabase/migrations`](./supabase/migrations).
+4. 依檔名順序套用 [`supabase/migrations`](./supabase/migrations) 內的 migration。
 
-5. Optionally run [`supabase/seed.sql`](./supabase/seed.sql) for local sample head spa content.
+5. 如需本機示範資料，可執行 [`supabase/seed.sql`](./supabase/seed.sql)。
 
-6. Start the app.
+6. 啟動開發伺服器。
 
 ```bash
 npm run dev
 ```
 
-7. Build for production validation.
+7. 上線前建議至少跑一次：
 
 ```bash
 npm run build
+npm run security:scan
 ```
 
-## Auth Model
+## 權限模型
 
-- Member identity comes from Supabase Auth.
-- `member_profiles` is the profile extension table for authenticated users.
-- `/account` and admin access depend on authenticated sessions, not `localStorage`.
-- Admin authorization is based on `member_profiles.is_admin` plus SQL policies.
+- 會員身份以 Supabase Auth session 為準。
+- `member_profiles` 是會員資料延伸表。
+- `/account` 和 `/admin` 都以 server session / middleware 保護，不以 browser localStorage 作權限來源。
+- 管理員權限由 `member_profiles.is_admin` 與資料庫 policy 判斷。
 
-## Core Flows
+## 核心流程
 
-### Booking
+### 預約
 
-- Availability and booking creation go through server routes.
-- Members can select a valid `user_tickets` entitlement during booking to reduce the amount due to `$0` and deduct one package count.
-- Ticket redemption and cancellation reimbursement are recorded in `ticket_redemptions`.
+- 可預約時段與建立預約都經 server route。
+- 會員可在預約時選擇有效的 `user_tickets` 套票，金額會變成 `$0`，並扣 1 次。
+- 套票扣次與取消回補會寫入 `ticket_redemptions` ledger。
 
-### Orders And Stripe
+### 訂單與 Stripe
 
-- Product checkout posts to `/api/orders/create`.
-- Package checkout posts to `/api/tickets/purchase`.
-- Stripe Checkout is available for package and product orders when Stripe environment variables are configured.
-- Stripe webhooks post to `/api/stripe/webhook`; successful package payments issue `user_tickets` and write `ticket_redemptions`.
-- Manual payment confirmation remains available in admin as a backup settlement path.
+- 產品結賬使用 `/api/orders/create`。
+- 套票購買使用 `/api/tickets/purchase`。
+- Stripe env 完成後，產品和套票可使用 Stripe Checkout。
+- Stripe webhook endpoint 是 `/api/stripe/webhook`；套票付款成功後會自動建立 `user_tickets` 並寫入 `ticket_redemptions`。
+- 人工確認付款保留作後備，但只可由 admin route 發放套票。
 
-### Packages
+### 套票
 
-- Public and admin copy uses the customer-facing term `套票`.
-- `tickets` stores the package catalog.
-- `user_tickets` stores member-owned package balances.
-- `ticket_redemptions` is the immutable ledger for issue, redemption, and reimbursement events.
+- 前台與後台統一顯示為「套票」。
+- `tickets` 儲存套票模板。
+- `user_tickets` 儲存會員持有套票與餘額。
+- `ticket_redemptions` 是不可變使用紀錄，記錄發放、扣次和回補。
 
-## Supabase Setup
+## Supabase 設定
 
-The canonical schema lives under [`supabase/migrations`](./supabase/migrations).
+正式 schema 以 [`supabase/migrations`](./supabase/migrations) 為準。
 
-Fresh setup checklist:
+全新環境檢查：
 
-1. Create a clean Supabase project or reset the development database.
-2. Apply the migration files in filename order from `supabase/migrations`.
-3. Optionally run [`supabase/seed.sql`](./supabase/seed.sql) for local sample content.
-4. Create a test member account through the app.
-5. Mark one user as admin in `member_profiles`.
-6. Verify public pages, `/account`, booking flow, orders, packages, Stripe webhook, and `/admin`.
+1. 建立或重設 Supabase project。
+2. 依檔名順序套用 `supabase/migrations`。
+3. 如需要示範內容，執行 `supabase/seed.sql`。
+4. 透過網站建立第一個會員。
+5. 在 `member_profiles` 將正式管理員設為 `is_admin = true`。
+6. 驗證前台、會員中心、預約、訂單、套票、Stripe webhook 和 `/admin`。
 
-Legacy note:
+舊 SQL 檔只作歷史參考；`sql-fix-permissions.sql` 屬緊急修復腳本，不應作為全新安裝流程。
 
-- The old root-level SQL files remain in the repo as historical reference only.
-- `sql-fix-permissions.sql` is an emergency legacy repair script and must not be used as part of a clean setup.
+## 上線驗收
 
-## Verification Checklist
+正式上線前至少確認：
 
-Before launch review:
+1. 新會員註冊後會建立 `member_profiles`。
+2. 登入後 `/account` 顯示會員資料。
+3. 頭皮護理預約可建立並顯示在會員預約。
+4. Stripe test card 購買套票後，webhook 會發放 `user_tickets`。
+5. 人工付款套票保持 `awaiting_payment`，直到 admin 確認才發放。
+6. 使用套票預約會扣 1 次。
+7. 取消使用套票的預約會回補 1 次。
+8. Admin 確認付款會建立正確的會員套票。
+9. 產品訂單 Stripe 成功後會轉為完成狀態。
+10. Admin 帳號可以進入 `/admin`。
+11. 普通會員不能進入 `/admin`。
+12. `npm run build`、`npm run security:scan`、`npm audit --production` 全部通過。
 
-1. Register a new member and confirm a `member_profiles` row is created.
-2. Log in and confirm `/account` shows member data correctly.
-3. Create a head spa booking and confirm it appears in member bookings.
-4. Purchase a package with Stripe test card and confirm webhook fulfilment creates `user_tickets`.
-5. Purchase a package through manual payment and confirm it stays `awaiting_payment` until admin approval.
-6. Book with a valid package and confirm one count is deducted.
-7. Cancel a package booking and confirm one count is restored.
-8. Confirm admin payment approval creates the correct `user_tickets` row.
-9. Place a product order and confirm Stripe success marks it completed.
-10. Log into an admin account and confirm `/admin` is accessible.
-11. Confirm a non-admin account is redirected away from `/admin`.
-12. Run `npm run build` and keep the output as the latest baseline.
+Palace Hair Spa 替代驗收請見 [`PALACEHAIRSPA_REPLACEMENT_ACCEPTANCE.md`](./PALACEHAIRSPA_REPLACEMENT_ACCEPTANCE.md)。
 
-For Palace Hair Spa replacement readiness, use [`PALACEHAIRSPA_REPLACEMENT_ACCEPTANCE.md`](./PALACEHAIRSPA_REPLACEMENT_ACCEPTANCE.md).
+## 待業主確認
 
-## Known Follow-Up Work
-
-- Validate all migrations, RLS policies, RPCs, and admin access against the real production Supabase project.
-- Configure production Stripe live keys, webhook endpoint, and `NEXT_PUBLIC_SITE_URL`, then run a full live-mode payment rehearsal before DNS cutover.
-- Add confirmed production address, phone, WhatsApp, price list, photos, social links, opening hours, and SEO assets once approved by the business owner.
+- 正式地址、電話、WhatsApp、Google Map、社交平台連結。
+- 正式服務價目、套票條款、產品內容、護理師資料、FAQ、文章內容。
+- Stripe live key、webhook secret、Vercel env、正式網域與 DNS 切換時間。
 
 ## License
 

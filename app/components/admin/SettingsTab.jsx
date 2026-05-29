@@ -98,6 +98,11 @@ const SECTION_OPTIONS = [
     description: '管理 Google Analytics、Meta Pixel、Instagram Shop 與外部平台備註。',
   },
   {
+    key: 'apiSettings',
+    title: 'API / 金鑰設定',
+    description: '集中記錄 Stripe、Supabase、Upstash 與 webhook 的安全接入狀態。',
+  },
+  {
     key: 'availability',
     title: '假期 / 公休日',
     description: '設定店舖營業時間、時段步長與預約緩衝時間。',
@@ -260,6 +265,7 @@ export default function SettingsTab({
       social: draft?.instagram_url || draft?.facebook_url || draft?.google_map_url ? '已填社交連結' : '待填社交連結',
       messaging: draft?.whatsapp ? '已填 WhatsApp' : '待填訊息入口',
       integrations: draft?.google_analytics_id || draft?.facebook_pixel_id ? '已填追蹤工具' : '待接追蹤工具',
+      apiSettings: draft?.api_environment || draft?.api_stripe_webhook_endpoint ? '已建立 API 清單' : '待建立 API 清單',
       availability: draft?.business_hours ? '已設定營業時間' : '未設定營業時間',
       daysOff: daysOff.length ? `已選 ${daysOff.length} 日` : '沒有全店公休日',
       admins: adminDraft.filter((profile) => profile?.is_admin === true).length
@@ -607,6 +613,62 @@ export default function SettingsTab({
             </label>
           </div>
         )
+      case 'apiSettings':
+        return (
+          <div style={{ display: 'grid', gap: '16px' }}>
+            <div style={{ padding: '12px 14px', border: '1px solid #FED7AA', borderRadius: '12px', background: '#FFF7ED', color: '#9A3412', fontSize: '13px', lineHeight: 1.7 }}>
+              這裡只保存「非敏感」API 接入資料與檢查備註。Stripe Secret、Webhook Secret、Supabase Service Role、Upstash Token 必須放在 Vercel Environment Variables，不會存入後台 settings。
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+              <label style={{ display: 'grid', gap: '8px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 800 }}>API 環境</span>
+                <select value={draft.api_environment || 'staging'} onChange={(event) => updateSetting('api_environment', event.target.value)} style={fieldStyle}>
+                  <option value="staging">Staging / 測試</option>
+                  <option value="production">Production / 正式</option>
+                </select>
+              </label>
+              <label style={{ display: 'grid', gap: '8px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 800 }}>公開網站 URL</span>
+                <input type="url" value={draft.site_url || ''} onChange={(event) => updateSetting('site_url', event.target.value)} style={fieldStyle} placeholder="https://pandora-spa.vercel.app" />
+              </label>
+            </div>
+            <label style={{ display: 'grid', gap: '8px' }}>
+              <span style={{ fontSize: '13px', fontWeight: 800 }}>Stripe Webhook Endpoint</span>
+              <input type="url" value={draft.api_stripe_webhook_endpoint || ''} onChange={(event) => updateSetting('api_stripe_webhook_endpoint', event.target.value)} style={fieldStyle} placeholder="https://pandora-spa.vercel.app/api/stripe/webhook" />
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', fontSize: '13px', fontWeight: 800 }}>
+                <input type="checkbox" checked={draft.api_supabase_env_ready === 'true'} onChange={(event) => updateSetting('api_supabase_env_ready', event.target.checked ? 'true' : 'false')} />
+                Supabase env 已填入 Vercel
+              </label>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', fontSize: '13px', fontWeight: 800 }}>
+                <input type="checkbox" checked={draft.api_stripe_env_ready === 'true'} onChange={(event) => updateSetting('api_stripe_env_ready', event.target.checked ? 'true' : 'false')} />
+                Stripe env 已填入 Vercel
+              </label>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', fontSize: '13px', fontWeight: 800 }}>
+                <input type="checkbox" checked={draft.api_upstash_env_ready === 'true'} onChange={(event) => updateSetting('api_upstash_env_ready', event.target.checked ? 'true' : 'false')} />
+                Upstash rate limit 已填入 Vercel
+              </label>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+              <label style={{ display: 'grid', gap: '8px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 800 }}>Rate limit provider</span>
+                <select value={draft.api_rate_limit_provider || 'memory'} onChange={(event) => updateSetting('api_rate_limit_provider', event.target.value)} style={fieldStyle}>
+                  <option value="memory">Memory fallback</option>
+                  <option value="upstash">Upstash Redis / Vercel KV</option>
+                </select>
+              </label>
+              <label style={{ display: 'grid', gap: '8px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 800 }}>負責人 / 聯絡</span>
+                <input type="text" value={draft.api_ops_owner || ''} onChange={(event) => updateSetting('api_ops_owner', event.target.value)} style={fieldStyle} placeholder="例如：店主 / 技術負責人 WhatsApp" />
+              </label>
+            </div>
+            <label style={{ display: 'grid', gap: '8px' }}>
+              <span style={{ fontSize: '13px', fontWeight: 800 }}>API 接入備註</span>
+              <textarea value={draft.api_connection_note || ''} onChange={(event) => updateSetting('api_connection_note', event.target.value)} style={{ ...fieldStyle, minHeight: '96px', resize: 'vertical' }} placeholder="記錄 Stripe test/live、Supabase project、webhook 測試日期、上線前要核對的 API 狀態。" />
+            </label>
+          </div>
+        )
       case 'availability':
         return (
           <div style={{ display: 'grid', gap: '16px' }}>
@@ -704,7 +766,7 @@ export default function SettingsTab({
         return (
           <div style={{ display: 'grid', gap: '12px' }}>
             <div style={{ color: 'var(--text-light)', fontSize: '13px', lineHeight: 1.7 }}>
-              此檢查會讀取後台 settings，並掃描 app / lib / launch 文件中是否仍有舊品牌、亂碼或示範測試字眼。
+              此檢查會讀取後台 settings 及 server env readiness。程式碼舊品牌、亂碼與敏感資料掃描請在部署前執行 npm run security:scan。
             </div>
             {auditLoading ? <div style={{ padding: '14px', color: 'var(--text-light)' }}>正在檢查...</div> : null}
             {audit?.error ? <div style={{ padding: '14px', border: '1px solid #FECACA', borderRadius: '12px', background: '#FEF2F2', color: '#B91C1C' }}>{audit.error}</div> : null}

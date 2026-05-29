@@ -6,13 +6,31 @@ import { toast } from 'react-hot-toast'
 import { supabase } from '../../lib/supabase'
 
 const CART_KEY = 'pandora_cart'
+const ALL_CATEGORY = '全部'
 
 const formatCurrency = (value) => `$${Math.round(Number(value || 0))}`
 
+const getPaymentOptions = (settings = {}) => {
+  const options = []
+  if (settings.stripe_enabled !== 'false' && settings.stripe_checkout_ready === 'true') {
+    options.push({ value: 'stripe', label: 'Stripe 網上付款' })
+  }
+  if (settings.manual_payment_enabled !== 'false') {
+    options.push({ value: 'cash', label: '人工確認付款' })
+  }
+  if (settings.fps_enabled === 'true') {
+    options.push({ value: 'fps', label: 'FPS / 轉數快' })
+  }
+  if (settings.pay_at_shop_enabled === 'true') {
+    options.push({ value: 'pay_at_shop', label: '到店付款' })
+  }
+  return options.length ? options : [{ value: 'cash', label: '人工確認付款' }]
+}
+
 export default function ProductsPage() {
   const [products, setProducts] = useState([])
-  const [categories, setCategories] = useState(['全部'])
-  const [activeCategory, setActiveCategory] = useState('全部')
+  const [categories, setCategories] = useState([ALL_CATEGORY])
+  const [activeCategory, setActiveCategory] = useState(ALL_CATEGORY)
   const [cart, setCart] = useState([])
   const [showCart, setShowCart] = useState(false)
   const [showCheckout, setShowCheckout] = useState(false)
@@ -21,25 +39,37 @@ export default function ProductsPage() {
   const [orderPlaced, setOrderPlaced] = useState(false)
   const [orderRef, setOrderRef] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [settings, setSettings] = useState({})
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     address: '',
-    delivery: '門市自取',
-    payment: '現金',
+    delivery: 'pickup',
+    payment: 'cash',
   })
+
+  const paymentOptions = useMemo(() => getPaymentOptions(settings), [settings])
 
   useEffect(() => {
     const load = async () => {
       setLoading(true)
-      const [{ data }, authRes] = await Promise.all([
+      const [productsRes, authRes, settingsRes] = await Promise.all([
         supabase.from('products').select('*').eq('enabled', true).order('id'),
         supabase.auth.getUser(),
+        fetch('/api/public/settings', { cache: 'no-store' }).then((response) => response.json()).catch(() => ({})),
       ])
 
-      setProducts(data || [])
-      const uniqueCategories = [...new Set((data || []).map((item) => item.category).filter(Boolean))]
-      setCategories(['全部', ...uniqueCategories])
+      const loadedProducts = productsRes?.data || []
+      const loadedSettings = settingsRes?.settings || {}
+      const options = getPaymentOptions(loadedSettings)
+
+      setProducts(loadedProducts)
+      setSettings(loadedSettings)
+      setCategories([ALL_CATEGORY, ...new Set(loadedProducts.map((item) => item.category).filter(Boolean))])
+      setFormData((current) => ({
+        ...current,
+        payment: options.some((option) => option.value === current.payment) ? current.payment : options[0].value,
+      }))
 
       const user = authRes?.data?.user || null
       if (user) {
@@ -85,14 +115,16 @@ export default function ProductsPage() {
   }, [cart])
 
   const filteredProducts = useMemo(() => {
-    if (activeCategory === '全部') return products
+    if (activeCategory === ALL_CATEGORY) return products
     return products.filter((item) => item.category === activeCategory)
   }, [activeCategory, products])
 
   const cartTotal = useMemo(() => cart.reduce((sum, item) => sum + Number(item.price || 0), 0), [cart])
+  const selectedDeliveryLabel = formData.delivery === 'delivery' ? '送貨' : '到店取貨'
+  const selectedPaymentLabel = paymentOptions.find((option) => option.value === formData.payment)?.label || formData.payment
 
   const addToCart = (product) => {
-    setCart((current) => [...current, { ...product, cartId: Date.now() + Math.random() }])
+    setCart((current) => [...current, { ...product, cartId: Date.now() + Math.random(), quantity: 1 }])
     toast.success(`${product.name} 已加入購物車`)
   }
 
@@ -106,8 +138,13 @@ export default function ProductsPage() {
       return
     }
 
-    if (formData.delivery === '送貨上門' && !formData.address.trim()) {
+    if (formData.delivery === 'delivery' && !formData.address.trim()) {
       toast.error('送貨訂單需要填寫地址')
+      return
+    }
+
+    if (!paymentOptions.some((option) => option.value === formData.payment)) {
+      toast.error('請選擇可用付款方式')
       return
     }
 
@@ -139,16 +176,14 @@ export default function ProductsPage() {
           payment: formData.payment,
           items: cart.map((item) => ({
             id: item.id,
-            name: item.name,
-            price: Number(item.price || 0),
+            quantity: item.quantity || 1,
           })),
-          total: cartTotal,
         }),
       })
 
       const payload = await response.json()
       if (!response.ok) {
-        throw new Error(payload?.error || 'Order failed')
+        throw new Error(payload?.error || '建立訂單失敗')
       }
 
       setOrderRef(payload?.ref || '')
@@ -162,9 +197,9 @@ export default function ProductsPage() {
       setShowCheckout(false)
       setCheckoutStep(1)
       localStorage.removeItem(CART_KEY)
-      toast.success('訂單已提交，我們會盡快跟進')
+      toast.success('訂單已建立，我們會盡快跟進')
     } catch (error) {
-      toast.error(`下單失敗: ${error.message}`)
+      toast.error(`下單失敗：${error.message}`)
     } finally {
       setSubmitting(false)
     }
@@ -181,7 +216,7 @@ export default function ProductsPage() {
         <h1>
           頭皮與頭髮<span>護理產品</span>
         </h1>
-        <p>精選適合日常頭皮潔淨、保濕和舒緩護理的產品。購物車只儲存在你的裝置，會員資料則由登入帳戶讀取。</p>
+        <p>精選適合日常頭皮潔淨、保濕和舒緩護理的產品。產品可到店取貨；如需送貨，請先與店員確認安排。</p>
       </section>
 
       <section className="vh-section">
@@ -200,7 +235,7 @@ export default function ProductsPage() {
                 <div className="vh-product-media">{product.emoji || 'SP'}</div>
                 <div className="vh-product-body">
                   <h3>{product.name}</h3>
-                  <p>{product.description || '日常頭皮與頭髮護理用品。'}</p>
+                  <p>{product.description || '日常頭皮與頭髮護理產品。'}</p>
                   <div className="vh-product-bottom">
                     <div>
                       <strong>{formatCurrency(product.price)}</strong>
@@ -232,7 +267,7 @@ export default function ProductsPage() {
           <div className="vh-dialog-head">
             <h3>購物車 ({cart.length})</h3>
             <button type="button" onClick={() => setShowCart(false)} aria-label="關閉">
-              ×
+              x
             </button>
           </div>
 
@@ -250,7 +285,7 @@ export default function ProductsPage() {
             ))}
           </div>
 
-          <div className="vh-dialog-total">總計: {formatCurrency(cartTotal)}</div>
+          <div className="vh-dialog-total">總計：{formatCurrency(cartTotal)}</div>
           <button
             type="button"
             onClick={() => {
@@ -259,7 +294,7 @@ export default function ProductsPage() {
             }}
             className="vh-btn vh-btn-primary vh-full-btn"
           >
-            前往結帳
+            前往結賬
           </button>
         </Dialog>
       )}
@@ -267,9 +302,9 @@ export default function ProductsPage() {
       {showCheckout && (
         <Dialog onClose={() => setShowCheckout(false)}>
           <div className="vh-dialog-head">
-            <h3>產品結帳</h3>
+            <h3>產品結賬</h3>
             <button type="button" onClick={() => setShowCheckout(false)} aria-label="關閉">
-              ×
+              x
             </button>
           </div>
 
@@ -278,18 +313,16 @@ export default function ProductsPage() {
               <input value={formData.name} onChange={(event) => setFormData((current) => ({ ...current, name: event.target.value }))} placeholder="姓名" />
               <input value={formData.phone} onChange={(event) => setFormData((current) => ({ ...current, phone: event.target.value }))} placeholder="電話" />
               <select value={formData.delivery} onChange={(event) => setFormData((current) => ({ ...current, delivery: event.target.value }))}>
-                <option value="門市自取">門市自取</option>
-                <option value="送貨上門">送貨上門</option>
+                <option value="pickup">到店取貨</option>
+                <option value="delivery">送貨</option>
               </select>
-              {formData.delivery === '送貨上門' && (
+              {formData.delivery === 'delivery' && (
                 <textarea value={formData.address} onChange={(event) => setFormData((current) => ({ ...current, address: event.target.value }))} placeholder="送貨地址" rows={3} />
               )}
               <select value={formData.payment} onChange={(event) => setFormData((current) => ({ ...current, payment: event.target.value }))}>
-                <option value="Stripe">Stripe 網上付款</option>
-                <option value="現金">現金</option>
-                <option value="FPS">FPS</option>
-                <option value="銀行轉帳">銀行轉帳</option>
+                {paymentOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
+              {settings.product_fulfillment_note ? <p style={{ margin: 0, color: 'var(--text-light)', fontSize: '13px', lineHeight: 1.6 }}>{settings.product_fulfillment_note}</p> : null}
               <button type="button" onClick={handleCheckout} className="vh-btn vh-btn-primary vh-full-btn">
                 下一步
               </button>
@@ -299,11 +332,11 @@ export default function ProductsPage() {
           {checkoutStep === 2 && (
             <div className="vh-confirm-box">
               <div className="vh-summary-card">
-                <p><strong>姓名:</strong> {formData.name}</p>
-                <p><strong>電話:</strong> {formData.phone}</p>
-                <p><strong>取貨方式:</strong> {formData.delivery}</p>
-                {formData.delivery === '送貨上門' ? <p><strong>地址:</strong> {formData.address}</p> : null}
-                <p><strong>付款方式:</strong> {formData.payment}</p>
+                <p><strong>姓名：</strong> {formData.name}</p>
+                <p><strong>電話：</strong> {formData.phone}</p>
+                <p><strong>取貨方式：</strong> {selectedDeliveryLabel}</p>
+                {formData.delivery === 'delivery' ? <p><strong>地址：</strong> {formData.address}</p> : null}
+                <p><strong>付款方式：</strong> {selectedPaymentLabel}</p>
               </div>
               <div className="vh-dialog-list">
                 {cart.map((item) => (
@@ -313,7 +346,7 @@ export default function ProductsPage() {
                   </div>
                 ))}
               </div>
-              <div className="vh-dialog-total">總計: {formatCurrency(cartTotal)}</div>
+              <div className="vh-dialog-total">總計：{formatCurrency(cartTotal)}</div>
               <button type="button" onClick={handlePlaceOrder} disabled={submitting} className="vh-btn vh-btn-primary vh-full-btn">
                 {submitting ? '提交中...' : '確認下單'}
               </button>
@@ -331,7 +364,7 @@ export default function ProductsPage() {
             <div className="vh-success-mark">OK</div>
             <h3>訂單已建立</h3>
             <p>我們已收到你的產品訂單，店舖會按你選擇的送貨或自取方式跟進。</p>
-            {orderRef ? <strong>訂單編號: {orderRef}</strong> : null}
+            {orderRef ? <strong>訂單編號：{orderRef}</strong> : null}
             <Link href="/account" className="vh-btn vh-btn-primary vh-full-btn">
               前往會員中心
             </Link>

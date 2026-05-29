@@ -13,6 +13,8 @@ const IMPORTANT_SETTING_KEYS = [
   'whatsapp',
   'google_map_url',
   'business_hours',
+  'api_environment',
+  'api_stripe_webhook_endpoint',
 ]
 
 export async function GET() {
@@ -63,7 +65,32 @@ export async function GET() {
       },
     ]
 
-    const checks = [...settingChecks, ...paymentChecks]
+    const apiChecks = [
+      {
+        id: 'api_supabase_env',
+        label: 'Supabase Env',
+        status: process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY && process.env.SUPABASE_SERVICE_ROLE_KEY ? 'pass' : 'fail',
+        detail: process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY && process.env.SUPABASE_SERVICE_ROLE_KEY
+          ? text('Supabase URL、Anon Key、Service Role 已存在 server env')
+          : text('Vercel/server env 必須填入 NEXT_PUBLIC_SUPABASE_URL、NEXT_PUBLIC_SUPABASE_ANON_KEY、SUPABASE_SERVICE_ROLE_KEY'),
+      },
+      {
+        id: 'api_rate_limit_backend',
+        label: 'Production Rate Limit',
+        status: process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN ? 'pass' : 'warning',
+        detail: process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+          ? text('Upstash Redis / Vercel KV rate limit 已可跨 instance 使用')
+          : text('目前會使用 memory fallback；正式收錢網站建議在 Vercel env 加 UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN'),
+      },
+      {
+        id: 'api_secret_policy',
+        label: text('Secret 存放政策'),
+        status: 'pass',
+        detail: text('Stripe secret、Webhook secret、Supabase service role、Upstash token 只應放 Vercel/server env，不會由 public settings 回傳'),
+      },
+    ]
+
+    const checks = [...settingChecks, ...paymentChecks, ...apiChecks]
     const summary = {
       pass: checks.filter((item) => item.status === 'pass').length,
       warning: checks.filter((item) => item.status === 'warning').length,

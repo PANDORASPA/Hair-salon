@@ -14,7 +14,7 @@ const STATUS_OPTIONS = [
   { value: 'pending', label: '待處理' },
   { value: 'paid', label: '已付款' },
   { value: 'failed', label: '失敗' },
-  { value: 'reconciled', label: '已對帳' },
+  { value: 'reconciled', label: '已對賬' },
   { value: 'cancelled', label: '已取消' },
 ]
 
@@ -38,7 +38,7 @@ const matchRecord = (rows, value, aliases = []) => {
   const needle = String(value).trim()
   return (rows || []).find((row) => {
     if (!row) return false
-    const candidates = [row.id, row.ref, row.code, row.name, row.title, ...aliases.flatMap((key) => row?.[key] == null ? [] : [row[key]])]
+    const candidates = [row.id, row.ref, row.code, row.name, row.title, ...aliases.flatMap((key) => (row?.[key] == null ? [] : [row[key]]))]
     return candidates.some((candidate) => String(candidate ?? '').trim() === needle)
   }) || null
 }
@@ -47,11 +47,12 @@ const getCustomerLabel = (customer) => customer?.name || customer?.full_name || 
 const getBookingLabel = (booking) => booking?.ref || booking?.booking_ref || booking?.code || `預約 #${booking?.id || ''}`
 const getOrderLabel = (order) => order?.ref || order?.order_no || order?.code || `訂單 #${order?.id || ''}`
 const getLocationLabel = (location) => location?.name || location?.title || location?.code || '地點'
-const getProviderGroupLabel = (group) => group?.name || group?.title || group?.code || '服務供應者群組'
+const getProviderGroupLabel = (group) => group?.name || group?.title || group?.code || '服務人員群組'
 const getKindLabel = (kind) => KIND_OPTIONS.find((item) => item.value === kind)?.label || kind || '-'
 const getStatusLabel = (status) => STATUS_OPTIONS.find((item) => item.value === status)?.label || status || '-'
 const getLinkedLocationId = (row) => row?.location_id ?? row?.branch_id ?? row?.location?.id ?? row?.branch?.id ?? ''
 const getLinkedProviderGroupId = (row) => row?.provider_group_id ?? row?.group_id ?? row?.provider_group?.id ?? ''
+
 const formatDateTime = (value, fallback) => {
   const source = value || fallback
   if (!source) return '-'
@@ -265,6 +266,12 @@ export default function TransactionsTab({
           const payload = { ...item }
           delete payload.__isNew
           delete payload.__deleted
+          delete payload.__booking
+          delete payload.__order
+          delete payload.__customer
+          delete payload.__location
+          delete payload.__providerGroup
+          delete payload.__linkedLabel
           return payload
         })
       await saveTransactions({ transactions: items, deletedIds })
@@ -274,7 +281,7 @@ export default function TransactionsTab({
   }
 
   if (!available) {
-    return <EmptyState title="交易表暫時未可用" description="請先完成最新 migration，以啟用帳目式付款追蹤。" />
+    return <EmptyState title="交易表暫時未可用" description="請先完成最新 migration，才可使用營運帳目追蹤。" />
   }
 
   const isSaving = Boolean(saving || localSaving)
@@ -284,10 +291,10 @@ export default function TransactionsTab({
       <SectionHeader
         eyebrow="交易紀錄"
         title="營運帳目"
-        description="追蹤交易參考編號、付款方式、已連結預約、訂單、顧客，以及已解析的營運範圍。"
+        description="追蹤交易參考編號、付款方式、已連結預約、訂單、會員，以及已對賬的營運範圍。"
         actions={
           <div className="admin-inline-actions">
-            <Pill>{filteredTransactions.length} 可見</Pill>
+            <Pill>{filteredTransactions.length} 筆可見</Pill>
             <Pill>{summary.linkedBookings} 預約連結</Pill>
             <Pill>{summary.linkedOrders} 訂單連結</Pill>
             {saveTransactions ? (
@@ -300,7 +307,7 @@ export default function TransactionsTab({
       />
 
       <RecordFilterBar columns="repeat(auto-fit, minmax(180px, 1fr))" actions={<button type="button" onClick={addTransaction} className="btn btn-small btn-interactive">+ 新增交易</button>}>
-        <input type="text" placeholder="搜尋參考編號、顧客、預約、訂單、備註..." value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} style={fieldStyle} />
+        <input type="text" placeholder="搜尋參考編號、會員、預約、訂單、備註..." value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} style={fieldStyle} />
         <select value={kindFilter} onChange={(event) => setKindFilter(event.target.value)} style={fieldStyle}>
           <option value="all">全部類型</option>
           {KIND_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
@@ -314,8 +321,8 @@ export default function TransactionsTab({
       <div className="admin-metric-grid">
         <Metric label="記錄數" value={summary.rows} />
         <Metric label="帳目總額" value={formatMoney(summary.amount, 'HKD')} tone="primary" />
-        <Metric label="已連結顧客" value={summary.linkedCustomers} />
-        <Metric label="已對帳" value={summary.reconciled} />
+        <Metric label="已連結會員" value={summary.linkedCustomers} />
+        <Metric label="已對賬" value={summary.reconciled} />
       </div>
 
       <div className="admin-card admin-table-shell">
@@ -359,7 +366,7 @@ export default function TransactionsTab({
                         <input type="number" value={row.amount || 0} onChange={(event) => update(row.id, { amount: parseInt(event.target.value, 10) || 0 })} style={smallFieldStyle} disabled={deleted} onClick={(event) => event.stopPropagation()} />
                       </td>
                       <td>
-                        <input value={row.payment_method || ''} onChange={(event) => update(row.id, { payment_method: event.target.value })} placeholder="現金 / 信用卡 / 銀行轉帳" style={smallFieldStyle} disabled={deleted} onClick={(event) => event.stopPropagation()} />
+                        <input value={row.payment_method || ''} onChange={(event) => update(row.id, { payment_method: event.target.value })} placeholder="現金 / 信用卡 / 銀行轉賬" style={smallFieldStyle} disabled={deleted} onClick={(event) => event.stopPropagation()} />
                         <div className="admin-muted-line">{row.provider || row.payment_ref || ''}</div>
                       </td>
                       <td>
@@ -419,11 +426,11 @@ export default function TransactionsTab({
                 <div className="admin-detail-grid">
                   <DetailBlock label="預約" value={selectedTransaction.__booking ? getBookingLabel(selectedTransaction.__booking) : selectedTransaction.booking_id ? `預約 #${selectedTransaction.booking_id}` : '-'} />
                   <DetailBlock label="訂單" value={selectedTransaction.__order ? getOrderLabel(selectedTransaction.__order) : selectedTransaction.order_id ? `訂單 #${selectedTransaction.order_id}` : '-'} />
-                  <DetailBlock label="顧客" value={selectedTransaction.__customer ? getCustomerLabel(selectedTransaction.__customer) : selectedTransaction.customer_name || '-'} />
+                  <DetailBlock label="會員" value={selectedTransaction.__customer ? getCustomerLabel(selectedTransaction.__customer) : selectedTransaction.customer_name || '-'} />
                   <DetailBlock label="付款方式" value={selectedTransaction.payment_method || selectedTransaction.__order?.payment_method || selectedTransaction.__booking?.payment_method || '-'} />
                   <DetailBlock label="地點" value={selectedTransaction.__location ? getLocationLabel(selectedTransaction.__location) : selectedTransaction.location_name || selectedTransaction.__order?.location_name || selectedTransaction.__booking?.location_name || '-'} />
-                  <DetailBlock label="供應者群組" value={selectedTransaction.__providerGroup ? getProviderGroupLabel(selectedTransaction.__providerGroup) : selectedTransaction.provider_group_name || selectedTransaction.__order?.provider_group_name || selectedTransaction.__booking?.provider_group_name || '-'} />
-                  <DetailBlock label="供應者參考" value={selectedTransaction.provider || selectedTransaction.__order?.provider || selectedTransaction.__booking?.provider || '-'} />
+                  <DetailBlock label="服務人員群組" value={selectedTransaction.__providerGroup ? getProviderGroupLabel(selectedTransaction.__providerGroup) : selectedTransaction.provider_group_name || selectedTransaction.__order?.provider_group_name || selectedTransaction.__booking?.provider_group_name || '-'} />
+                  <DetailBlock label="供應商參考" value={selectedTransaction.provider || selectedTransaction.__order?.provider || selectedTransaction.__booking?.provider || '-'} />
                   <DetailBlock label="付款參考" value={selectedTransaction.payment_ref || selectedTransaction.__order?.payment_ref || selectedTransaction.__booking?.payment_ref || '-'} />
                 </div>
               </div>

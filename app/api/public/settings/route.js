@@ -63,6 +63,14 @@ const DEFAULT_SETTINGS = {
   meta_catalog_enabled: 'false',
   instagram_shop_enabled: 'false',
   integration_note: '',
+  api_environment: 'staging',
+  api_stripe_webhook_endpoint: process.env.NEXT_PUBLIC_SITE_URL ? `${process.env.NEXT_PUBLIC_SITE_URL}/api/stripe/webhook` : 'https://pandora-spa.vercel.app/api/stripe/webhook',
+  api_supabase_env_ready: 'false',
+  api_stripe_env_ready: 'false',
+  api_upstash_env_ready: 'false',
+  api_rate_limit_provider: 'memory',
+  api_ops_owner: '',
+  api_connection_note: '',
   feature_booking_enabled: 'true',
   feature_tickets_enabled: 'true',
   feature_products_enabled: 'true',
@@ -157,6 +165,9 @@ export async function GET() {
       settings[row.key] = normalizeSettingValue(row.key, row.value)
     }
     settings.stripe_checkout_ready = process.env.STRIPE_SECRET_KEY ? 'true' : 'false'
+    settings.stripe_webhook_ready = process.env.STRIPE_WEBHOOK_SECRET ? 'true' : 'false'
+    settings.supabase_server_ready = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY && process.env.SUPABASE_SERVICE_ROLE_KEY ? 'true' : 'false'
+    settings.rate_limit_backend_ready = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN ? 'true' : 'false'
 
     return NextResponse.json(
       { settings },
