@@ -85,7 +85,7 @@ INSERT INTO public.coupons (code, name, discount, type, min_spend, enabled)
 SELECT 'SAVE100', '滿 500 減 100', 100, 'fixed', 500, true
 WHERE NOT EXISTS (SELECT 1 FROM public.coupons WHERE code = 'SAVE100');
 
-INSERT INTO public.staff (name, role, phone, bio, enabled, schedule, services, "daysOff", break_start, break_end)
+INSERT INTO public.staff (name, role, phone, bio, enabled, schedule, services, daysoff, break_start, break_end)
 SELECT
   'Mika',
   '資深頭皮護理師',
@@ -99,7 +99,7 @@ SELECT
   '16:00'
 WHERE NOT EXISTS (SELECT 1 FROM public.staff WHERE name = 'Mika');
 
-INSERT INTO public.staff (name, role, phone, bio, enabled, schedule, services, "daysOff", break_start, break_end)
+INSERT INTO public.staff (name, role, phone, bio, enabled, schedule, services, daysoff, break_start, break_end)
 SELECT
   'Nora',
   'Head Spa 服務人員',

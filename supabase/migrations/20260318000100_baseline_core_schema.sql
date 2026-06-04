@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS public.staff (
   enabled BOOLEAN DEFAULT true,
   schedule JSONB DEFAULT '{}'::jsonb,
   services JSONB DEFAULT '[]'::jsonb,
-  "daysOff" JSONB DEFAULT '[]'::jsonb,
+  daysoff JSONB DEFAULT '[]'::jsonb,
   break_start TIME DEFAULT '15:00',
   break_end TIME DEFAULT '16:00',
   created_at TIMESTAMPTZ DEFAULT NOW()
