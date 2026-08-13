@@ -7,9 +7,7 @@
     "build": "next build",
     "start": "next start",
     "test": "node --test tests/*.test.mjs",
-    "security:scan": "node scripts/security-scan.mjs",
-    "smoke:phase2:live": "node scripts/phase2-live-smoke.mjs",
-    "smoke:release-gate": "node scripts/release-gate-smoke.mjs"
+    "security:scan": "node scripts/security-scan.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
