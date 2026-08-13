@@ -34,7 +34,10 @@ export async function POST(request) {
   const slots=buildAvailability({date:input.value.date,durationMinutes:serviceRes.data.duration_minutes,hours:hoursRes.data,blocked:Boolean(blockRes.data?.length),appointments:appointmentsRes.data||[]})
   if(!slots.includes(input.value.time))return NextResponse.json({error:'The requested time is not available.'},{status:409})
   const { data,error } = await db.rpc('create_salon_appointment',{ p_service_id:input.value.serviceId,p_user_id:user?.id || null,p_customer_name:input.value.name,p_customer_phone:input.value.phone,p_customer_email:input.value.email || null,p_starts_at:startsAt.toISOString(),p_customer_notes:input.value.notes || null })
-  if (error) return NextResponse.json({ error:error.message.includes('slot_unavailable') ? 'That time is no longer available.' : 'We could not create the appointment.' },{ status:error.message.includes('slot_unavailable') ? 409 : 500 })
+  if (error) {
+    const conflict=error.code==='23P01'||error.message.includes('slot_unavailable')
+    return NextResponse.json({ error:conflict ? 'This time has just been booked. Please choose another time.' : 'We could not create the appointment.' },{ status:conflict ? 409 : 500 })
+  }
   if (!(request.headers.get('content-type') || '').includes('application/json')) return NextResponse.redirect(new URL(`/booking?requested=${encodeURIComponent(data.reference)}`,request.url),303)
   return NextResponse.json({ appointment:data },{ status:201 })
 }

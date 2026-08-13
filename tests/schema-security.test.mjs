@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { readdir } from "node:fs/promises";
 
 const corePath = new URL("../supabase/migrations/20260813000100_salon_poke_core.sql", import.meta.url);
 const securityPath = new URL("../supabase/migrations/20260813000200_salon_poke_rls_storage.sql", import.meta.url);
@@ -27,6 +28,27 @@ test("authorization is based on admin_users and protects the final admin", async
   assert.doesNotMatch(sql, /user_metadata|raw_user_meta_data/);
   assert.match(sql, /cannot remove the final active admin/i);
   assert.match(sql, /REVOKE ALL ON FUNCTION public\.is_salon_admin\(\) FROM PUBLIC/i);
+});
+
+test("active appointments have a database-level fifteen-minute overlap guard", async () => {
+  const directory = new URL("../supabase/migrations/", import.meta.url);
+  const migrations = await readdir(directory);
+  const sql = (await Promise.all(migrations.map((name) => readFile(new URL(name, directory), "utf8")))).join("\n");
+  assert.match(sql, /EXCLUDE\s+USING\s+gist/i);
+  assert.match(sql, /buffer_ends_at\s+timestamptz/i);
+  assert.match(sql, /NEW\.buffer_ends_at\s*:=\s*NEW\.ends_at\s*\+\s*interval\s*'15 minutes'/i);
+  assert.match(sql, /tstzrange\(starts_at,\s*buffer_ends_at,\s*'\[\)'\)\s+WITH\s+&&/i);
+  assert.match(sql, /WHERE\s*\(status\s*<>\s*'cancelled'\)/i);
+  assert.match(sql, /conflicting appointment references/i);
+});
+
+test("appointment updates share the database collision guard", async () => {
+  const directory = new URL("../supabase/migrations/", import.meta.url);
+  const migrations = await readdir(directory);
+  const sql = (await Promise.all(migrations.map((name) => readFile(new URL(name, directory), "utf8")))).join("\n");
+  assert.match(sql, /update_salon_appointment/i);
+  assert.match(sql, /appointment_slot_unavailable/i);
+  assert.match(sql, /GRANT EXECUTE[^;]*update_salon_appointment[^;]*service_role/is);
 });
 
 test("public policies only expose published catalogue and gallery rows", async () => {

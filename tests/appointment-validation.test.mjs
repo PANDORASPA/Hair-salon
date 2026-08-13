@@ -26,3 +26,9 @@ test('appointment creation rechecks the requested slot on the server', async () 
   assert.match(source, /requested time is not available/i)
   assert.match(source, /blocked_dates/)
 })
+
+test('database exclusion conflicts are returned as a slot conflict', async () => {
+  const source = await readFile(new URL('../app/api/appointments/route.js', import.meta.url), 'utf8')
+  assert.match(source, /23P01/)
+  assert.match(source, /This time has just been booked\. Please choose another time\./)
+})

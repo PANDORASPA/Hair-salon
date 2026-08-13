@@ -26,3 +26,13 @@ test('administrator API delegates final-admin protection to the database and nev
   assert.match(source,/is_active/)
   assert.doesNotMatch(source,/user_metadata|raw_user_meta_data|member_profiles/)
 })
+
+test('appointment admin updates surface collision conflicts and operation feedback', async () => {
+  const route = await read('app/api/admin/appointments/route.js')
+  const module = await read('app/components/admin/SalonAdminModules.jsx')
+  assert.match(route,/update_salon_appointment/)
+  assert.match(route,/409/)
+  assert.match(module,/role="status"/)
+  assert.match(module,/role="alert"/)
+  assert.match(module,/Updating/)
+})
