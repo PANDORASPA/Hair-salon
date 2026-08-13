@@ -1,6 +1,7 @@
 import './globals.css'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
+import { getPublicSalonContent } from '../lib/content/public-content'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://lo-chan-hair-bristol.vercel.app'
 const description = 'Salon Poke Bristol is an Asian hair salon specialising in cutting, colour, perm, straightening and hair repair.'
@@ -14,14 +15,16 @@ export const metadata = {
 }
 
 export const viewport = { width: 'device-width', initialScale: 1 }
+export const revalidate = 60
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  const salon = await getPublicSalonContent()
   return (
     <html lang="en-GB">
       <body className="salon-site">
-        <Navbar />
+        <Navbar salon={salon} />
         <main>{children}</main>
-        <Footer />
+        <Footer salon={salon} />
       </body>
     </html>
   )

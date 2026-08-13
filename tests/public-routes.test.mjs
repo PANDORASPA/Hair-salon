@@ -35,7 +35,10 @@ test("shared navigation exposes the live Salon Poke route set", async () => {
 
 test("home page preserves the live primary message and contact action", async () => {
   const source = await read("app/page.js");
-  assert.match(source, /Hong Kong Hairstylist in Bristol/);
-  assert.match(source, /wa\.me\/447724594963/);
+  const defaults = await read("content/salon-poke-defaults.js");
+  assert.match(source, /salon\.identity\.heroTitle/);
+  assert.match(source, /salon\.contact\.whatsapp/);
+  assert.match(defaults, /Hong Kong Hairstylist in Bristol/);
+  assert.match(defaults, /447724594963/);
   assert.match(source, /Book Your Appointment/);
 });

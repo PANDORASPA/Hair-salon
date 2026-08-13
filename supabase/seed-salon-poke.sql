@@ -24,16 +24,16 @@ INSERT INTO public.services(name,price,time,duration_minutes,category,descriptio
 ('Consultation Only',0,30,30,'Consultation','Recommended before major colour correction, perm or straightening.',true,true,220);
 
 INSERT INTO public.site_content(id,data) VALUES (1, jsonb_build_object(
-  'identity', jsonb_build_object('name','Salon Poke Bristol','shortName','Salon Poke','tagline','Asian hair salon','heroTitle','Hong Kong Hairstylist in Bristol'),
+  'identity', jsonb_build_object('name','Salon Poke Bristol','shortName','Salon Poke','tagline','Asian hair salon','eyebrow','Bristol · By Appointment Only','heroTitle','Hong Kong Hairstylist in Bristol','heroBody','Over 20 years of professional experience in cutting, colouring, perming, straightening and hair repair. Specialist care for Asian hair, delivered with calm, considered attention in a private Bristol city centre studio.'),
   'contact', jsonb_build_object('whatsapp','447724594963','email','hello@salonpokebristol.com','instagram','salonpokebristol','area','Bristol City Centre · Park Row Area','addressNote','The full address is shared once your appointment is confirmed.'),
   'bookingNotice','Choose your service, pick a time and we will confirm your appointment personally.'
 )) ON CONFLICT (id) DO UPDATE SET data=EXCLUDED.data,updated_at=now();
 
 INSERT INTO public.gallery_images(storage_path,alt_text,caption,sort_order,published) VALUES
-('mens-textured-highlights.jpg','Textured men''s haircut with subtle highlights','Men''s Cut',10,true),
-('c-curl-perm.jpg','Long layered cut with C-curl perm finish','Ladies Cut',20,true),
-('studio-interior.jpg','Inside the Salon Poke Bristol studio','Our Studio',30,true),
-('precision-cutting.jpg','Precision cutting in progress','Precision',40,true),
-('in-the-studio.jpg','A client in the chair at the Bristol studio','In the chair',50,true),
-('korean-cut-poster.jpg','Korean micro-differentiation haircut poster','Korean Cut',60,true)
+('local/mens-textured-highlights.png','Textured men''s haircut with subtle highlights','Men''s Cut',10,true),
+('local/c-curl-perm.png','Long layered cut with C-curl perm finish','Ladies Cut',20,true),
+('local/studio-interior-clean.png','Inside the calm private Salon Poke Bristol studio','Our Studio',30,true),
+('local/precision-cutting.png','Precision cutting in progress','Precision',40,true),
+('local/in-the-studio.png','A client in the chair at the Bristol studio','In the chair',50,true),
+('local/korean-cut-poster.png','Korean micro-differentiation haircut poster','Korean Cut',60,true)
 ON CONFLICT (storage_path) DO UPDATE SET alt_text=EXCLUDED.alt_text,caption=EXCLUDED.caption,sort_order=EXCLUDED.sort_order,published=true;

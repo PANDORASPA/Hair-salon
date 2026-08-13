@@ -9,7 +9,7 @@ const links = [
   ['/about', 'About'], ['/location', 'Location'], ['/contact', 'Contact'],
 ]
 
-export default function Navbar() {
+export default function Navbar({ salon }) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const active = (href) => pathname === href || (href !== '/' && pathname?.startsWith(`${href}/`))
@@ -17,7 +17,7 @@ export default function Navbar() {
   return (
     <header className="salon-header">
       <Link href="/" className="salon-brand" onClick={() => setOpen(false)}>
-        <strong>Salon Poke</strong><span>Asian hair salon</span>
+        <strong>{salon.identity.shortName}</strong><span>{salon.identity.tagline}</span>
       </Link>
       <button className="salon-menu-button" type="button" aria-expanded={open} aria-controls="salon-nav" onClick={() => setOpen(!open)}>
         <span className="sr-only">Menu</span>☰

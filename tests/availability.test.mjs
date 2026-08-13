@@ -1,11 +1,17 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import availabilityModule from '../lib/booking/salon-availability.js'
-const { buildAvailability, londonLocalToUtc } = availabilityModule
+const { buildAvailability, londonLocalToUtc, londonDateWindow } = availabilityModule
 
 test('London local conversion observes daylight saving time', () => {
   assert.equal(londonLocalToUtc('2026-01-15', '10:00').toISOString(), '2026-01-15T10:00:00.000Z')
   assert.equal(londonLocalToUtc('2026-07-15', '10:00').toISOString(), '2026-07-15T09:00:00.000Z')
+})
+
+test('London date windows cover the correct UTC interval across daylight saving', () => {
+  const summer = londonDateWindow('2026-07-15')
+  assert.equal(summer.start.toISOString(), '2026-07-14T23:00:00.000Z')
+  assert.equal(summer.end.toISOString(), '2026-07-15T23:00:00.000Z')
 })
 
 test('availability removes overlaps and respects service duration', () => {
