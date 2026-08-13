@@ -1,0 +1,3 @@
+import PageIntro from '../components/PageIntro'
+export const metadata = { title: 'Contact' }
+export default function ContactPage() { return <><PageIntro eyebrow="Contact" title="Talk to us about your hair"><p>Send a message if you are unsure which service to choose.</p></PageIntro><section className="salon-wrap salon-section salon-contact-grid"><a href="https://wa.me/447724594963"><strong>WhatsApp</strong><span>+44 7724 594963</span></a><a href="mailto:hello@salonpokebristol.com"><strong>Email</strong><span>hello@salonpokebristol.com</span></a><a href="https://instagram.com/salonpokebristol"><strong>Instagram</strong><span>@salonpokebristol</span></a></section></> }

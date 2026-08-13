@@ -1,0 +1,3 @@
+import PageIntro from '../components/PageIntro'
+export const metadata = { title: 'Booking Policy' }
+export default function TermsPage() { return <><PageIntro eyebrow="Policy" title="Booking policy" /><section className="salon-wrap salon-section salon-prose"><h2>Appointments</h2><p>Appointments are confirmed personally. Please arrive on time and tell us as early as possible if you need to change or cancel.</p><h2>Pricing</h2><p>Published prices are guides. Final price depends on hair length, thickness, condition and the agreed service.</p><h2>Colour and chemical services</h2><p>A consultation or patch test may be required before colour, bleach, perm or straightening services.</p></section></> }

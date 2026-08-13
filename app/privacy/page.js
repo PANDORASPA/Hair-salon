@@ -1,0 +1,3 @@
+import PageIntro from '../components/PageIntro'
+export const metadata = { title: 'Privacy' }
+export default function PrivacyPage() { return <><PageIntro eyebrow="Privacy" title="Privacy policy" /><section className="salon-wrap salon-section salon-prose"><p>We collect only the contact, hair and appointment information needed to respond to enquiries and provide booked services.</p><p>Your account and appointment information is protected using authenticated access. We do not sell personal information.</p><p>Contact <a href="mailto:hello@salonpokebristol.com">hello@salonpokebristol.com</a> to request access, correction or deletion.</p></section></> }

@@ -1,0 +1,3 @@
+import PageIntro from '../components/PageIntro'
+export const metadata = { title: 'Location' }
+export default function LocationPage() { return <><PageIntro eyebrow="Visit the studio" title="A quiet studio in the heart of Bristol"><p>Conveniently located in the Park Row area, minutes from Bristol University, Park Street and the harbourside.</p></PageIntro><section className="salon-wrap salon-section salon-prose"><h2>Bristol City Centre · Park Row Area</h2><p>By appointment only. The full address and arrival instructions are shared once your appointment is confirmed.</p><p>For accessibility or travel questions, message us before booking.</p><a className="salon-button" href="https://wa.me/447724594963">Ask on WhatsApp</a></section></> }

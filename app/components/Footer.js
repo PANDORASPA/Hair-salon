@@ -1,32 +1,13 @@
-'use client'
-
-import { useEffect, useState } from 'react'
+import Link from 'next/link'
 
 export default function Footer() {
-  const [settings, setSettings] = useState({})
-
-  useEffect(() => {
-    fetch('/api/public/settings', { cache: 'no-store' })
-      .then((response) => response.json())
-      .then((payload) => setSettings(payload?.settings || {}))
-      .catch(() => setSettings({}))
-  }, [])
-
-  const phone = settings.whatsapp || settings.phone
-
   return (
-    <footer className="footer">
-      <p>© 2026 {settings.shop_name || 'PANDORA HEAD SPA'}. All Rights Reserved.</p>
-      <p>
-        {settings.address ? `${settings.address} · ` : ''}
-        {phone ? `WhatsApp / 電話：${phone} · ` : ''}
-        {settings.business_hours ? `營業時間：${settings.business_hours}` : '店舖資料、服務內容、套票與預約安排可由後台即時更新。'}
-      </p>
-      <p>
-        {settings.instagram_url ? <a href={settings.instagram_url} target="_blank" rel="noreferrer">Instagram</a> : null}
-        {settings.facebook_url ? <a href={settings.facebook_url} target="_blank" rel="noreferrer">Facebook</a> : null}
-        {settings.google_map_url ? <a href={settings.google_map_url} target="_blank" rel="noreferrer">Google Map</a> : null}
-      </p>
+    <footer className="salon-footer">
+      <div><strong>Salon Poke Bristol</strong><p>Asian hair expertise in a calm Bristol city-centre studio. By appointment only.</p></div>
+      <div><strong>Visit</strong><p>Bristol City Centre<br />Park Row Area<br />Full address shared after confirmation</p></div>
+      <div><strong>Explore</strong><p><Link href="/services">Services</Link><br /><Link href="/booking">Book Online</Link><br /><Link href="/gallery">Gallery</Link><br /><Link href="/account">My Account</Link></p></div>
+      <div><strong>Contact</strong><p><a href="https://wa.me/447724594963">WhatsApp</a><br /><a href="mailto:hello@salonpokebristol.com">Email</a><br /><a href="https://instagram.com/salonpokebristol">Instagram</a></p></div>
+      <small>© 2026 Salon Poke Bristol. All rights reserved.</small>
     </footer>
   )
 }
