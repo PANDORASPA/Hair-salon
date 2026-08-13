@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, statSync } from 'fs'
 import { join, relative } from 'path'
+import { execFileSync } from 'child_process'
 
 const root = process.cwd()
 const ignoredDirs = new Set(['.git', '.next', '.npm-cache', 'node_modules'])
@@ -12,6 +13,15 @@ const forbidden = [
 ]
 
 const findings = []
+
+try {
+  const tracked = execFileSync('git', ['ls-files'], { encoding:'utf8' }).split(/\r?\n/)
+  for (const file of tracked) {
+    if (/^\.env($|\.)/.test(file) && file !== '.env.example') findings.push({ file, line:1, label:'Tracked environment file' })
+  }
+} catch {
+  // The content scan below remains useful outside a Git checkout.
+}
 
 const scanFile = (path) => {
   const rel = relative(root, path).replaceAll('\\', '/')
