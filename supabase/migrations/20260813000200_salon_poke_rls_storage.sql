@@ -42,7 +42,7 @@ CREATE POLICY "Salon admins manage gallery" ON public.gallery_images FOR ALL TO 
 CREATE POLICY "Salon public site content" ON public.site_content FOR SELECT TO anon, authenticated USING (id = 1);
 CREATE POLICY "Salon admins manage site content" ON public.site_content FOR ALL TO authenticated USING (public.is_salon_admin()) WITH CHECK (public.is_salon_admin());
 CREATE POLICY "Salon admins read audit" ON public.admin_audit_logs FOR SELECT TO authenticated USING (public.is_salon_admin());
-CREATE POLICY "Salon admins write audit" ON public.admin_audit_logs FOR INSERT TO authenticated WITH CHECK (public.is_salon_admin() AND actor_id = auth.uid());
+CREATE POLICY "Salon admins write audit" ON public.admin_audit_logs FOR INSERT TO authenticated WITH CHECK (public.is_salon_admin() AND COALESCE(actor_id, actor_user_id) = auth.uid());
 
 INSERT INTO storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
 VALUES ('salon-gallery','salon-gallery',true,10485760,ARRAY['image/jpeg','image/png','image/webp'])
