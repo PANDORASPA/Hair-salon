@@ -44,6 +44,27 @@ CREATE TABLE IF NOT EXISTS public.appointments (
 CREATE INDEX IF NOT EXISTS appointments_starts_status_idx ON public.appointments(starts_at, status);
 CREATE INDEX IF NOT EXISTS appointments_user_idx ON public.appointments(user_id, starts_at DESC);
 
+CREATE OR REPLACE FUNCTION public.create_salon_appointment(
+  p_service_id bigint, p_user_id uuid, p_customer_name text, p_customer_phone text,
+  p_customer_email text, p_starts_at timestamptz, p_customer_notes text DEFAULT null
+) RETURNS public.appointments
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE selected_service public.services; created public.appointments; calculated_end timestamptz;
+BEGIN
+  SELECT * INTO selected_service FROM public.services WHERE id=p_service_id AND enabled=true AND published=true;
+  IF NOT FOUND THEN RAISE EXCEPTION 'service_not_available'; END IF;
+  calculated_end := p_starts_at + make_interval(mins => selected_service.duration_minutes);
+  PERFORM pg_advisory_xact_lock(hashtextextended((p_starts_at AT TIME ZONE 'Europe/London')::date::text, 0));
+  IF EXISTS (SELECT 1 FROM public.appointments WHERE status <> 'cancelled' AND starts_at < calculated_end + interval '15 minutes' AND ends_at + interval '15 minutes' > p_starts_at) THEN
+    RAISE EXCEPTION 'appointment_slot_unavailable';
+  END IF;
+  INSERT INTO public.appointments(user_id,service_id,customer_name,customer_phone,customer_email,starts_at,ends_at,customer_notes)
+  VALUES(p_user_id,p_service_id,trim(p_customer_name),trim(p_customer_phone),nullif(trim(p_customer_email),''),p_starts_at,calculated_end,nullif(trim(p_customer_notes),'')) RETURNING * INTO created;
+  RETURN created;
+END; $$;
+REVOKE ALL ON FUNCTION public.create_salon_appointment(bigint,uuid,text,text,text,timestamptz,text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.create_salon_appointment(bigint,uuid,text,text,text,timestamptz,text) TO service_role;
+
 CREATE TABLE IF NOT EXISTS public.business_hours (
   weekday smallint PRIMARY KEY CHECK (weekday BETWEEN 0 AND 6),
   is_open boolean NOT NULL DEFAULT false,
@@ -89,6 +110,10 @@ CREATE TABLE IF NOT EXISTS public.admin_audit_logs (
   metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
   created_at timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE public.admin_audit_logs ADD COLUMN IF NOT EXISTS actor_id uuid REFERENCES auth.users(id) ON DELETE SET NULL;
+ALTER TABLE public.admin_audit_logs ADD COLUMN IF NOT EXISTS entity_type text;
+ALTER TABLE public.admin_audit_logs ADD COLUMN IF NOT EXISTS entity_id text;
+ALTER TABLE public.admin_audit_logs ADD COLUMN IF NOT EXISTS metadata jsonb NOT NULL DEFAULT '{}'::jsonb;
 CREATE INDEX IF NOT EXISTS salon_admin_audit_created_idx ON public.admin_audit_logs(created_at DESC);
 
 CREATE OR REPLACE FUNCTION public.salon_set_updated_at()

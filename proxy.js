@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 
 export async function proxy(request) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   let response = NextResponse.next()
 
@@ -36,7 +36,7 @@ export async function proxy(request) {
   const adminAuthPath = '/admin/login'
   if (pathname.startsWith('/account') && !user) {
     const url = request.nextUrl.clone()
-    url.pathname = '/login'
+    url.pathname = '/signin'
     url.searchParams.set('redirectTo', pathname + request.nextUrl.search)
     return NextResponse.redirect(url)
   }
@@ -50,12 +50,12 @@ export async function proxy(request) {
     }
 
     const { data: profile } = await supabase
-      .from('member_profiles')
-      .select('is_admin')
-      .eq('id', user.id)
+      .from('admin_users')
+      .select('is_active')
+      .eq('user_id', user.id)
       .maybeSingle()
 
-    if (!profile?.is_admin) {
+    if (!profile?.is_active) {
       const url = request.nextUrl.clone()
       url.pathname = adminAuthPath
       url.searchParams.set('redirectTo', pathname + request.nextUrl.search)
