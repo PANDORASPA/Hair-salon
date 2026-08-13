@@ -1,4 +1,4 @@
-﻿TRUNCATE TABLE public.services RESTART IDENTITY CASCADE;
+TRUNCATE TABLE public.services RESTART IDENTITY CASCADE;
 INSERT INTO public.services(name,price,time,duration_minutes,category,description,enabled,published,sort_order) VALUES
 ('Men''s Haircut (Dry)',3500,45,45,'Haircut','',true,true,10),
 ('Men''s Haircut (Shampoo + Cut)',4000,60,60,'Haircut','',true,true,20),
