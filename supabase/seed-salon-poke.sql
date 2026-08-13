@@ -1,4 +1,4 @@
-TRUNCATE TABLE public.services RESTART IDENTITY CASCADE;
+﻿TRUNCATE TABLE public.services RESTART IDENTITY CASCADE;
 INSERT INTO public.services(name,price,time,duration_minutes,category,description,enabled,published,sort_order) VALUES
 ('Men''s Haircut (Dry)',3500,45,45,'Haircut','',true,true,10),
 ('Men''s Haircut (Shampoo + Cut)',4000,60,60,'Haircut','',true,true,20),
@@ -24,16 +24,17 @@ INSERT INTO public.services(name,price,time,duration_minutes,category,descriptio
 ('Consultation Only',0,30,30,'Consultation','Recommended before major colour correction, perm or straightening.',true,true,220);
 
 INSERT INTO public.site_content(id,data) VALUES (1, jsonb_build_object(
-  'identity', jsonb_build_object('name','Salon Poke Bristol','shortName','Salon Poke','tagline','Asian hair salon','eyebrow','Bristol · By Appointment Only','heroTitle','Hong Kong Hairstylist in Bristol','heroBody','Over 20 years of professional experience in cutting, colouring, perming, straightening and hair repair. Specialist care for Asian hair, delivered with calm, considered attention in a private Bristol city centre studio.'),
-  'contact', jsonb_build_object('whatsapp','447724594963','email','hello@salonpokebristol.com','instagram','salonpokebristol','area','Bristol City Centre · Park Row Area','addressNote','The full address is shared once your appointment is confirmed.'),
+  'identity', jsonb_build_object('name','Salon Poke Bristol','shortName','Salon Poke','tagline','Asian hair salon','eyebrow','Bristol 繚 By Appointment Only','heroTitle','Hong Kong Hairstylist in Bristol','heroBody','Over 20 years of professional experience in cutting, colouring, perming, straightening and hair repair. Specialist care for Asian hair, delivered with calm, considered attention in a private Bristol city centre studio.'),
+  'contact', jsonb_build_object('whatsapp','447724594963','email','hello@salonpokebristol.com','instagram','salonpokebristol','area','Bristol City Centre 繚 Park Row Area','addressNote','The full address is shared once your appointment is confirmed.'),
   'bookingNotice','Choose your service, pick a time and we will confirm your appointment personally.'
 )) ON CONFLICT (id) DO UPDATE SET data=EXCLUDED.data,updated_at=now();
 
 INSERT INTO public.gallery_images(storage_path,alt_text,caption,sort_order,published) VALUES
 ('local/mens-textured-highlights.png','Textured men''s haircut with subtle highlights','Men''s Cut',10,true),
 ('local/c-curl-perm.png','Long layered cut with C-curl perm finish','Ladies Cut',20,true),
-('local/studio-interior-clean.png','Inside the calm private Salon Poke Bristol studio','Our Studio',30,true),
+('local/studio-interior-clean.jpg','Inside the calm private Salon Poke Bristol studio','Our Studio',30,true),
 ('local/precision-cutting.png','Precision cutting in progress','Precision',40,true),
 ('local/in-the-studio.png','A client in the chair at the Bristol studio','In the chair',50,true),
 ('local/korean-cut-poster.png','Korean micro-differentiation haircut poster','Korean Cut',60,true)
 ON CONFLICT (storage_path) DO UPDATE SET alt_text=EXCLUDED.alt_text,caption=EXCLUDED.caption,sort_order=EXCLUDED.sort_order,published=true;
+

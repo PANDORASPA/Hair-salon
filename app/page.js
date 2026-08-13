@@ -7,7 +7,7 @@ export default async function HomePage() {
   return <>
     <section className="salon-hero salon-wrap">
       <div><p className="salon-kicker">{salon.identity.eyebrow}</p><h1>{salon.identity.heroTitle}</h1><p className="salon-lead">{salon.identity.heroBody}</p><div className="salon-actions"><Link className="salon-button" href="/booking">Book Your Appointment</Link><Link className="salon-button secondary" href="/services">View Services</Link></div></div>
-      <figure className="salon-hero-image"><img src="/gallery/studio-interior-clean.png" alt="Salon Poke Bristol private studio interior" /></figure>
+      <figure className="salon-hero-image"><img src="/gallery/studio-interior-clean.jpg" alt="Salon Poke Bristol private studio interior" /></figure>
     </section>
     <section className="salon-stats"><div>20+ Years<span>Professional Experience</span></div><div>Asian Hair<span>Specialist</span></div><div>Bristol City<span>Centre Based</span></div><div>By Appointment<span>Only</span></div></section>
     <section className="salon-section salon-wrap"><p className="salon-kicker">What we do</p><h2>Popular Services</h2><p className="salon-lead">Every appointment begins with a short consultation so we can recommend the right treatment for your hair.</p><div className="salon-card-grid">{featured.map((item) => <article className="salon-card" key={item.name}><h3>{item.name}</h3><p>{item.description || 'Personalised care designed around your hair type, condition and lifestyle.'}</p><strong>{item.pricePence ? `£${item.pricePence / 100}` : 'Free'}</strong><Link href="/services">Details</Link></article>)}</div></section>
@@ -16,4 +16,5 @@ export default async function HomePage() {
     <section className="salon-cta"><p className="salon-kicker">Ready when you are</p><h2>Book your appointment today.</h2><p>{salon.bookingNotice || 'Choose your service, pick a time and we will confirm your appointment personally.'}</p><div className="salon-actions"><Link className="salon-button" href="/booking">Book Online</Link><a className="salon-button secondary" href={`https://wa.me/${salon.contact.whatsapp}`}>WhatsApp Us</a></div></section>
   </>
 }
+
 

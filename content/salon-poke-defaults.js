@@ -64,7 +64,7 @@ const salonDefaults = {
   gallery: [
     { path: "/gallery/mens-textured-highlights.png", alt: "Textured men's haircut with subtle highlights", label: "Men's Cut" },
     { path: "/gallery/c-curl-perm.png", alt: "Long layered cut with C-curl perm finish", label: "Ladies Cut" },
-    { path: "/gallery/studio-interior-clean.png", alt: "Inside the calm private Salon Poke Bristol studio", label: "Our Studio" },
+    { path: "/gallery/studio-interior-clean.jpg", alt: "Inside the calm private Salon Poke Bristol studio", label: "Our Studio" },
     { path: "/gallery/precision-cutting.png", alt: "Precision cutting in progress", label: "Precision" },
     { path: "/gallery/in-the-studio.png", alt: "A client in the chair at the Bristol studio", label: "In the chair" },
     { path: "/gallery/korean-cut-poster.png", alt: "Korean micro-differentiation haircut poster", label: "Korean Cut" },
@@ -72,4 +72,5 @@ const salonDefaults = {
 };
 
 module.exports = { salonDefaults };
+
 
