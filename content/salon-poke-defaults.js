@@ -1,4 +1,4 @@
-const service = (name, pricePence, category, durationMinutes, description = "") => ({
+﻿const service = (name, pricePence, category, durationMinutes, description = "") => ({
   name,
   pricePence,
   category,
@@ -62,13 +62,14 @@ const salonDefaults = {
     service("Consultation Only", 0, "Consultation", 30),
   ],
   gallery: [
-    { path: "/gallery/mens-textured-highlights.jpg", alt: "Textured men's haircut with subtle highlights", label: "Men's Cut" },
-    { path: "/gallery/c-curl-perm.jpg", alt: "Long layered cut with C-curl perm finish", label: "Ladies Cut" },
-    { path: "/gallery/studio-interior.jpg", alt: "Inside the Salon Poke Bristol studio", label: "Our Studio" },
-    { path: "/gallery/precision-cutting.jpg", alt: "Precision cutting in progress", label: "Precision" },
-    { path: "/gallery/in-the-studio.jpg", alt: "A client in the chair at the Bristol studio", label: "In the chair" },
-    { path: "/gallery/korean-cut-poster.jpg", alt: "Korean micro-differentiation haircut poster", label: "Korean Cut" },
+    { path: "/gallery/mens-textured-highlights.png", alt: "Textured men's haircut with subtle highlights", label: "Men's Cut" },
+    { path: "/gallery/c-curl-perm.png", alt: "Long layered cut with C-curl perm finish", label: "Ladies Cut" },
+    { path: "/gallery/studio-interior.png", alt: "Inside the Salon Poke Bristol studio", label: "Our Studio" },
+    { path: "/gallery/precision-cutting.png", alt: "Precision cutting in progress", label: "Precision" },
+    { path: "/gallery/in-the-studio.png", alt: "A client in the chair at the Bristol studio", label: "In the chair" },
+    { path: "/gallery/korean-cut-poster.png", alt: "Korean micro-differentiation haircut poster", label: "Korean Cut" },
   ],
 };
 
 module.exports = { salonDefaults };
+

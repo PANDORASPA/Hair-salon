@@ -1,6 +1,8 @@
 import PageIntro from '../components/PageIntro'
+import BookingForm from './BookingForm'
 import defaultsModule from '../../content/salon-poke-defaults'
-const { salonDefaults } = defaultsModule
-
-export const metadata = { title: 'Book an Appointment' }
-export default function BookingPage() { return <><PageIntro eyebrow="Booking" title="Book your appointment"><p>Choose a service and send your preferred date. We will confirm your appointment personally.</p></PageIntro><section className="salon-wrap salon-section"><form className="salon-form" action="/api/appointments" method="post"><label>Service<select name="serviceId" required defaultValue=""><option value="" disabled>Select a service</option>{salonDefaults.services.map((item, index) => <option value={index + 1} key={item.name}>{item.name} — {item.pricePence ? `£${item.pricePence / 100}` : 'Free'}</option>)}</select></label><div className="salon-form-row"><label>Preferred date<input type="date" name="date" required /></label><label>Preferred time<input type="time" name="time" required /></label></div><div className="salon-form-row"><label>Your name<input name="name" autoComplete="name" required /></label><label>Phone<input name="phone" autoComplete="tel" required /></label></div><label>Email<input type="email" name="email" autoComplete="email" required /></label><label>Notes<textarea name="notes" rows="4" placeholder="Tell us about your hair or the result you want" /></label><button className="salon-button" type="submit">Request Appointment</button></form></section></> }
+import { getServiceClient } from '../../lib/supabase/service'
+const {salonDefaults}=defaultsModule
+export const metadata={title:'Book an Appointment'}
+export const dynamic='force-dynamic'
+export default async function BookingPage(){let services=[];try{const {data}=await getServiceClient().from('services').select('id,name,price,duration_minutes').eq('published',true).eq('enabled',true).order('sort_order');services=data||[]}catch{}if(!services.length)services=salonDefaults.services.map((item,index)=>({id:index+1,name:item.name,price:item.pricePence,duration_minutes:item.durationMinutes}));return <><PageIntro eyebrow="Booking" title="Book your appointment"><p>Choose a service and an available time. We will confirm your appointment personally.</p></PageIntro><section className="salon-wrap salon-section"><BookingForm services={services}/></section></>}

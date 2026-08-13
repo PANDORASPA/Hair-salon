@@ -1,7 +1,6 @@
 import './globals.css'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
-import { Toaster } from 'react-hot-toast'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://lo-chan-hair-bristol.vercel.app'
 const description = 'Salon Poke Bristol is an Asian hair salon specialising in cutting, colour, perm, straightening and hair repair.'
@@ -20,7 +19,6 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en-GB">
       <body className="salon-site">
-        <Toaster />
         <Navbar />
         <main>{children}</main>
         <Footer />

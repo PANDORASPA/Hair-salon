@@ -18,7 +18,7 @@ export async function POST(request) {
   if (guard) return guard
   const input = validateAppointmentInput(await readInput(request))
   if (!input.ok) return NextResponse.json({ error:'Please check the form.', fields:input.errors },{ status:400 })
-  const auth = getServerClient(), { data:{ user } } = await auth.auth.getUser().catch(() => ({ data:{ user:null } }))
+  const auth = await getServerClient(), { data:{ user } } = await auth.auth.getUser().catch(() => ({ data:{ user:null } }))
   const startsAt = londonLocalToUtc(input.value.date,input.value.time)
   if (startsAt.getTime() < Date.now()) return NextResponse.json({ error:'Please choose a future time.' },{ status:400 })
   const db = getServiceClient()
@@ -29,7 +29,7 @@ export async function POST(request) {
 }
 
 export async function GET() {
-  const auth = getServerClient(), { data:{ user } } = await auth.auth.getUser()
+  const auth = await getServerClient(), { data:{ user } } = await auth.auth.getUser()
   if (!user) return NextResponse.json({ error:'Unauthorized' },{ status:401 })
   const { data,error } = await auth.from('appointments').select('*,services(name,price,duration_minutes)').eq('user_id',user.id).order('starts_at',{ ascending:false })
   return error ? NextResponse.json({ error:error.message },{ status:500 }) : NextResponse.json({ appointments:data || [] })
