@@ -30,16 +30,14 @@ test("authorization is based on admin_users and protects the final admin", async
   assert.match(sql, /REVOKE ALL ON FUNCTION public\.is_salon_admin\(\) FROM PUBLIC/i);
 });
 
-test("active appointments have a database-level fifteen-minute overlap guard", async () => {
-  const directory = new URL("../supabase/migrations/", import.meta.url);
-  const migrations = await readdir(directory);
-  const sql = (await Promise.all(migrations.map((name) => readFile(new URL(name, directory), "utf8")))).join("\n");
+test("active appointments have a database-level service-duration overlap guard", async () => {
+  const sql = await readFile(new URL("../supabase/migrations/20260818145144_remove_appointment_buffer.sql", import.meta.url), "utf8");
   assert.match(sql, /EXCLUDE\s+USING\s+gist/i);
-  assert.match(sql, /buffer_ends_at\s+timestamptz/i);
-  assert.match(sql, /NEW\.buffer_ends_at\s*:=\s*NEW\.ends_at\s*\+\s*interval\s*'15 minutes'/i);
+  assert.match(sql, /NEW\.buffer_ends_at\s*:=\s*NEW\.ends_at/i);
+  assert.doesNotMatch(sql, /interval\s*'15 minutes'/i);
   assert.match(sql, /tstzrange\(starts_at,\s*buffer_ends_at,\s*'\[\)'\)\s+WITH\s+&&/i);
   assert.match(sql, /WHERE\s*\(status\s*<>\s*'cancelled'\)/i);
-  assert.match(sql, /conflicting appointment references/i);
+  assert.match(sql, /UPDATE public\.appointments SET buffer_ends_at = ends_at/i);
 });
 
 test("appointment updates share the database collision guard", async () => {

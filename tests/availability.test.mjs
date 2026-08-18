@@ -14,9 +14,9 @@ test('London date windows cover the correct UTC interval across daylight saving'
   assert.equal(summer.end.toISOString(), '2026-07-15T23:00:00.000Z')
 })
 
-test('availability removes overlaps and respects service duration', () => {
-  const slots = buildAvailability({ date: '2026-08-20', durationMinutes: 60, bufferMinutes: 15, hours: { is_open: true, opens_at: '10:00', closes_at: '14:00' }, blocked: false, appointments: [{ starts_at: '2026-08-20T10:00:00.000Z', ends_at: '2026-08-20T11:00:00.000Z', status: 'confirmed' }] })
-  assert.deepEqual(slots, ['12:30'])
+test('availability uses only the service duration with no extra buffer', () => {
+  const slots = buildAvailability({ date: '2026-08-20', durationMinutes: 60, hours: { is_open: true, opens_at: '10:00', closes_at: '14:00' }, blocked: false, appointments: [{ starts_at: '2026-08-20T09:00:00.000Z', ends_at: '2026-08-20T10:00:00.000Z', status: 'confirmed' }] })
+  assert.deepEqual(slots, ['11:00', '12:00', '13:00'])
 })
 
 test('availability returns no slots for closed or blocked dates', () => {
