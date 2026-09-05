@@ -1,13 +1,6 @@
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://lo-chan-hair-bristol.vercel.app'
-
 export default function robots() {
   return {
-    rules: {
-      userAgent: '*',
-      allow: '/',
-      disallow: ['/admin', '/api'],
-    },
-    sitemap: `${siteUrl}/sitemap.xml`,
-    host: siteUrl,
+    rules: { userAgent: '*', allow: '/', disallow: ['/admin/', '/api/'] },
+    sitemap: 'https://salonpokeviva.com/sitemap.xml',
   }
 }

@@ -1,14 +1,34 @@
 import Link from 'next/link'
 
-export default function Footer({ salon }) {
-  const { identity, contact } = salon
+export default function Footer() {
   return (
     <footer className="salon-footer">
-      <div><strong>{identity.name}</strong><p>Asian hair expertise in a calm Bristol city-centre studio. By appointment only.</p></div>
-      <div><strong>Visit</strong><p>{contact.area}<br />{contact.addressNote}</p></div>
-      <div><strong>Explore</strong><p><Link href="/services">Services</Link><br /><Link href="/booking">Book Online</Link><br /><Link href="/gallery">Gallery</Link><br /><Link href="/account">My Account</Link></p></div>
-      <div><strong>Contact</strong><p><a href={`https://wa.me/${contact.whatsapp}`}>WhatsApp</a><br /><a href={`mailto:${contact.email}`}>Email</a><br /><a href={`https://instagram.com/${contact.instagram}`}>Instagram</a></p></div>
-      <small>© 2026 {identity.name}. All rights reserved.</small>
+      <div className="salon-wrap">
+        <div className="salon-footer-grid">
+          <div>
+            <p className="salon-footer-brand">SALON POKE BY VIVA</p>
+            <p className="salon-footer-tagline">爆毛術脫髮護理 — 亞洲人髮絲專家</p>
+          </div>
+          <div>
+            <p className="salon-footer-heading">快捷連結</p>
+            <nav>
+              <Link href="/">主頁</Link>
+              <Link href="/services">服務</Link>
+              <Link href="/booking">預約</Link>
+              <Link href="/about">關於</Link>
+              <Link href="/contact">聯絡</Link>
+            </nav>
+          </div>
+          <div>
+            <p className="salon-footer-heading">資訊</p>
+            <nav>
+              <Link href="/terms">使用條款</Link>
+              <Link href="/privacy">隱私政策</Link>
+            </nav>
+          </div>
+        </div>
+        <p className="salon-footer-copy">© {new Date().getFullYear()} SALON POKE BY VIVA. 保留所有權利。</p>
+      </div>
     </footer>
   )
 }

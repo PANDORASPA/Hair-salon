@@ -1,5 +1,13 @@
-import { Suspense } from 'react'
-import AuthForm from '../../components/AuthForm'
-import PageIntro from '../../components/PageIntro'
-export const metadata = { title: 'Admin sign in' }
-export default function AdminLoginPage(){ return <><PageIntro eyebrow="Admin access" title="Sign in"><p>Manage Salon Poke appointments, services, schedule, gallery and site content.</p></PageIntro><section className="salon-wrap salon-section"><Suspense><AuthForm admin /></Suspense></section></> }
+import { redirect } from 'next/navigation'
+import { getServerClient } from '../../../lib/supabase/server'
+import AdminShell from '../../AdminShell'
+
+export const metadata = { title: '管理員登入 | SALON POKE BY VIVA' }
+
+export default async function AdminLoginPage() {
+  const db = await getServerClient()
+  const { data: { user } } = await db.auth.getUser()
+  if (!user) redirect('/signin?redirectTo=/admin')
+
+  return <AdminShell email={user.email} />
+}

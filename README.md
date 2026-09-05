@@ -1,40 +1,64 @@
-# Salon Poke Bristol
+# SALON POKE BY VIVA — 爆毛術脫髮護理
 
-Git-backed public website, customer booking flow, account area, and focused administration system for Salon Poke Bristol.
+香港脫髮護理及髮型服務網站。功能包括：
 
-## Public website
+- 公開預約系統（支援套票扣減）
+- 客戶管理 + 套票分配
+- 管理後台（預約/客戶/套票/服務/圖庫）
+- Supabase 資料庫 + RLS 安全策略
+- 審計日誌
 
-The application preserves the live routes `/`, `/services`, `/booking`, `/gallery`, `/about`, `/location`, `/contact`, `/signin`, `/signup`, `/account`, `/terms`, and `/privacy`. Public fallback content is in `content/salon-poke-defaults.js`; recovered gallery assets are in `public/gallery`.
+## 技術架構
 
-## Administration
+- **前端**: Next.js 14 (App Router)
+- **資料庫**: Supabase (PostgreSQL)
+- **認證**: Supabase Auth
+- **部署**: Vercel（推薦）或任何 Node.js 平台
 
-`/admin` is protected by Supabase Auth plus an active row in `admin_users`. It contains only:
+## 環境變量
 
-- appointments;
-- services and prices;
-- weekly hours and blocked dates;
-- gallery images;
-- public site content;
-- administrator accounts.
-
-Authorization never relies on user-editable metadata. Every exposed table has RLS enabled and administrative mutations are audited.
-
-## Local setup
-
-1. Install the locked dependencies with `pnpm install --frozen-lockfile`.
-2. Copy `.env.example` to `.env.local` and fill the four required values.
-3. Apply `supabase/migrations` in filename order to a new Supabase project.
-4. Run `supabase/seed-salon-poke.sql`.
-5. Create the first Auth user and insert its UUID into `admin_users` as described in `docs/ADMIN_OPERATIONS.md`.
-6. Run `pnpm dev`.
-
-## Verification
-
-```bash
-pnpm test
-pnpm build
-pnpm security:scan
-npm audit --production
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+NEXT_PUBLIC_SITE_URL=https://your-domain.com
 ```
 
-Deployment, initial administrator, rollback, and routine operations are documented in `docs/DEPLOYMENT.md` and `docs/ADMIN_OPERATIONS.md`.
+## 資料庫設定
+
+1. 在 Supabase 建立新專案
+2. 執行 Migration：
+   ```bash
+   supabase db push
+   ```
+   或在 Supabase Dashboard → SQL Editor 依次執行：
+   - `supabase/migrations/20260905000000_customers_packages.sql`
+   - `supabase/migrations/20260905000001_appointments_customer_id.sql`
+3. 執行 Seed 數據：
+   - `supabase/seed-salon-poke.sql`
+
+## 本地開發
+
+```bash
+npm install
+npm run dev
+```
+
+## 部署到 Vercel
+
+1. Fork 或上傳代碼到 GitHub
+2. 在 Vercel Import Repository
+3. 設定環境變量
+4. Deploy
+
+## 套票功能
+
+- 客戶致電或 WhatsApp 聯絡，由管理員在後台分配套票
+- 客戶預約時可選擇使用套票（系統自動扣減）
+- 套票餘額顏色提示：綠色（充足）→ 橙色（少於25%）→ 紅色（耗盡）
+
+## 管理後台
+
+訪問 `/admin/login`，使用 Supabase Auth 帳戶登入。
+
+如需新增管理員，在 Supabase Dashboard → Authentication → Users 手動設定 `admin_users` 角色。

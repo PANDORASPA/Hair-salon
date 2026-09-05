@@ -1,31 +1,21 @@
 import './globals.css'
-import Navbar from './components/Navbar'
-import Footer from './components/Footer'
-import { getPublicSalonContent } from '../lib/content/public-content'
-
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://lo-chan-hair-bristol.vercel.app'
-const description = 'Salon Poke Bristol is an Asian hair salon specialising in cutting, colour, perm, straightening and hair repair.'
 
 export const metadata = {
-  metadataBase: new URL(siteUrl),
-  title: { default: 'Salon Poke Bristol | Asian Hair Salon', template: '%s | Salon Poke Bristol' },
-  description,
-  keywords: ['Asian hair salon Bristol', 'Hong Kong hairstylist Bristol', 'Salon Poke Bristol'],
-  openGraph: { type: 'website', locale: 'en_GB', url: siteUrl, siteName: 'Salon Poke Bristol', title: 'Salon Poke Bristol', description },
+  title: { default: 'SALON POKE BY VIVA | 爆毛術脫髮護理', template: '%s | SALON POKE BY VIVA' },
+  description: '超過20年專業經驗，專精剪髮、染髮、電髮及頭髮修護。亞洲人髮絲專家，香港市中心工作室。',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://salonpokeviva.com'),
 }
 
-export const viewport = { width: 'device-width', initialScale: 1 }
-export const revalidate = 60
-
-export default async function RootLayout({ children }) {
-  const salon = await getPublicSalonContent()
+export default function RootLayout({ children }) {
   return (
-    <html lang="en-GB">
-      <body className="salon-site">
-        <Navbar salon={salon} />
-        <main>{children}</main>
-        <Footer salon={salon} />
-      </body>
+    <html lang="zh-HK">
+      <head>
+        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+      </head>
+      <body>{children}</body>
     </html>
   )
 }

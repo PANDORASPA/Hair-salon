@@ -1,47 +1,62 @@
 import { NextResponse } from 'next/server'
-import availabilityModule from '../../../lib/booking/salon-availability'
-import validationModule from '../../../lib/validation/salon'
-import { getServerClient } from '../../../lib/supabase/server'
 import { getServiceClient } from '../../../lib/supabase/service'
 import { guardMutationRequest } from '../../../lib/security/request-guards'
-const { buildAvailability, londonLocalToUtc, londonDateWindow } = availabilityModule
-const { validateAppointmentInput } = validationModule
-
-const readInput = async (request) => {
-  const type = request.headers.get('content-type') || ''
-  if (type.includes('application/json')) return request.json().catch(() => ({}))
-  return Object.fromEntries((await request.formData()).entries())
-}
 
 export async function POST(request) {
-  const guard = await guardMutationRequest(request,{ rateLimit:{ scope:'salon.appointments',limit:8,windowMs:60_000 } })
+  const guard = await guardMutationRequest(request, { rateLimit: { scope: 'booking', limit: 10, windowMs: 3_600_000 } })
   if (guard) return guard
-  const input = validateAppointmentInput(await readInput(request))
-  if (!input.ok) return NextResponse.json({ error:'Please check the form.', fields:input.errors },{ status:400 })
-  const auth = await getServerClient(), { data:{ user } } = await auth.auth.getUser().catch(() => ({ data:{ user:null } }))
-  const startsAt = londonLocalToUtc(input.value.date,input.value.time)
-  if (startsAt.getTime() < Date.now()) return NextResponse.json({ error:'Please choose a future time.' },{ status:400 })
-  const db = getServiceClient()
-  const weekday=new Date(`${input.value.date}T12:00:00Z`).getUTCDay(),window=londonDateWindow(input.value.date)
-  const [serviceRes,hoursRes,blockRes,appointmentsRes]=await Promise.all([
-    db.from('services').select('duration_minutes').eq('id',input.value.serviceId).eq('published',true).eq('enabled',true).maybeSingle(),
-    db.from('business_hours').select('*').eq('weekday',weekday).maybeSingle(),
-    db.from('blocked_dates').select('id').lte('starts_on',input.value.date).gte('ends_on',input.value.date).limit(1),
-    db.from('appointments').select('starts_at,ends_at,status').neq('status','cancelled').gte('starts_at',window.start.toISOString()).lt('starts_at',window.end.toISOString()),
-  ])
-  const availabilityError=serviceRes.error||hoursRes.error||blockRes.error||appointmentsRes.error
-  if(availabilityError||!serviceRes.data)return NextResponse.json({error:'Availability is temporarily unavailable.'},{status:503})
-  const slots=buildAvailability({date:input.value.date,durationMinutes:serviceRes.data.duration_minutes,hours:hoursRes.data,blocked:Boolean(blockRes.data?.length),appointments:appointmentsRes.data||[]})
-  if(!slots.includes(input.value.time))return NextResponse.json({error:'The requested time is not available.'},{status:409})
-  const { data,error } = await db.rpc('create_salon_appointment',{ p_service_id:input.value.serviceId,p_user_id:user?.id || null,p_customer_name:input.value.name,p_customer_phone:input.value.phone,p_customer_email:input.value.email || null,p_starts_at:startsAt.toISOString(),p_customer_notes:input.value.notes || null })
-  if (error) return NextResponse.json({ error:error.message.includes('slot_unavailable') ? 'That time is no longer available.' : 'We could not create the appointment.' },{ status:error.message.includes('slot_unavailable') ? 409 : 500 })
-  if (!(request.headers.get('content-type') || '').includes('application/json')) return NextResponse.redirect(new URL(`/booking?requested=${encodeURIComponent(data.reference)}`,request.url),303)
-  return NextResponse.json({ appointment:data },{ status:201 })
-}
+  const body = await request.json()
+  const { serviceId, customerName, customerPhone, customerEmail, startsAt, customerId, customerPackageId } = body
 
-export async function GET() {
-  const auth = await getServerClient(), { data:{ user } } = await auth.auth.getUser()
-  if (!user) return NextResponse.json({ error:'Unauthorized' },{ status:401 })
-  const { data,error } = await auth.from('appointments').select('*,services(name,price,duration_minutes)').eq('user_id',user.id).order('starts_at',{ ascending:false })
-  return error ? NextResponse.json({ error:error.message },{ status:500 }) : NextResponse.json({ appointments:data || [] })
+  if (!serviceId || !customerName?.trim() || !customerPhone?.trim() || !startsAt) {
+    return NextResponse.json({ error: 'Missing required fields.' }, { status: 400 })
+  }
+  if (!Number.isSafeInteger(Number(serviceId))) {
+    return NextResponse.json({ error: 'Invalid service.' }, { status: 400 })
+  }
+  const start = new Date(startsAt)
+  if (Number.isNaN(start.getTime()) || start <= new Date()) {
+    return NextResponse.json({ error: 'Invalid or past booking time.' }, { status: 400 })
+  }
+
+  const db = getServiceClient()
+
+  // Get service duration
+  const { data: svc } = await db.from('services').select('duration_minutes').eq('id', Number(serviceId)).single()
+  const duration = Number(svc?.duration_minutes) || 60
+  const endsAt = new Date(start.getTime() + duration * 60_000)
+
+  // If customerPackageId, validate balance
+  if (customerPackageId) {
+    const { data: cp } = await db.from('customer_packages').select('id,sessions_remaining,is_active,expires_at').eq('id', Number(customerPackageId)).single()
+    if (!cp) return NextResponse.json({ error: 'Package not found.' }, { status: 400 })
+    if (!cp.is_active || new Date(cp.expires_at) <= new Date() || cp.sessions_remaining < 1) {
+      return NextResponse.json({ error: 'This package has no remaining sessions or has expired.' }, { status: 400 })
+    }
+  }
+
+  // Create appointment (user_id null for non-logged-in bookings)
+  const { data: apt, error: aptErr } = await db.from('appointments').insert({
+    user_id: null,
+    service_id: Number(serviceId),
+    customer_id: customerId ? Number(customerId) : null,
+    customer_package_id: customerPackageId ? Number(customerPackageId) : null,
+    customer_name: customerName.trim(),
+    customer_phone: customerPhone.trim(),
+    customer_email: customerEmail?.trim() || null,
+    starts_at: start.toISOString(),
+    ends_at: endsAt.toISOString(),
+    status: 'pending',
+  }).select().single()
+
+  if (aptErr) return NextResponse.json({ error: aptErr.message }, { status: 500 })
+
+  // Deduct session atomically via RPC
+  if (customerPackageId) {
+    try {
+      await db.rpc('deduct_package_session', { p_customer_package_id: Number(customerPackageId), p_appointment_id: apt.id })
+    } catch (_) {}
+  }
+
+  return NextResponse.json({ appointment: apt }, { status: 201 })
 }
