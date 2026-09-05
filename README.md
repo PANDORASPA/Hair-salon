@@ -2,6 +2,8 @@
 
 Git-backed public website, customer booking flow, account area, and focused administration system for Salon Poke Bristol.
 
+UK production: https://lo-chan-hair-bristol.vercel.app
+
 ## Public website
 
 The application preserves the live routes `/`, `/services`, `/booking`, `/gallery`, `/about`, `/location`, `/contact`, `/signin`, `/signup`, `/account`, `/terms`, and `/privacy`. Public fallback content is in `content/salon-poke-defaults.js`; recovered gallery assets are in `public/gallery`.
